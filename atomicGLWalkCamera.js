@@ -28,6 +28,9 @@ atomicGLWalkCamera = function(){
 	// rot
 	this.rot = 0.5 ;
 	
+	//Hauteur du saut
+	var height = 2;
+	
 	// methods
 	// --------------------------------------------------
 	// up/right/left/down
@@ -48,13 +51,15 @@ atomicGLWalkCamera = function(){
 		this.xc +=	-this.step*Math.cos(this.theta*3.14/180.0);
 		this.zc += 	-this.step*Math.sin(this.theta*3.14/180.0);
 	}
-	this.jump = function () {
-			var height = 2;
+	this.jump_up = function () {
 			this.yc += height;
 			
 			//On fait une pause pour marquer le saut puis on revient à la position initiale
-			jump_down(height,1000);
+			//jump_down(height,1000);
 			
+	}
+	this.jump_down = function () {
+		this.yc -= height;
 	}
 	this.turnright 	= function (a) {
 		limit = 0.02;
@@ -69,11 +74,11 @@ atomicGLWalkCamera = function(){
 
 }
 
-function jump_down(height,miliseconds) {
-           var currentTime = new Date().getTime();
+// function jump_down(height,miliseconds) {
+           // var currentTime = new Date().getTime();
 
-           while (currentTime + miliseconds >= new Date().getTime()) {
-           }
+           // while (currentTime + miliseconds >= new Date().getTime()) {
+           // }
 		   
-		   this.yc -= height;
-       }
+		   // this.yc -= height;
+       // }

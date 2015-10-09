@@ -1361,10 +1361,16 @@
 			// debug 
 			cam.down();			//
 		}
-		if (currentlyPressedKeys[32] || currentlyPressedKeys[13]) // (Space or enter) Jump
+		if (currentlyPressedKeys[32]) // (SPACE BAR) Jump up
 		{
 			//debug	
-			cam.jump();
+			cam.jump_up();
+			//cam.jump_down(); -> ne fait pas l'effort de monter et de descendre ><
+		}
+		if (currentlyPressedKeys[13]) //(ENTER) Jump down
+		{
+			//debug	
+			cam.jump_down();
 		}
 	}
 	
