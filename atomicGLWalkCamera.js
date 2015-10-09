@@ -49,7 +49,10 @@ atomicGLWalkCamera = function(){
 		this.zc += 	-this.step*Math.sin(this.theta*3.14/180.0);
 	}
 	this.turnright 	= function (a) {
-		this.theta += +a ;
+		limit = 0.02;
+		if( a >= limit || a <= -limit) {
+			this.theta += +a ;
+		}
 	}
 	this.turnleft 	= function (a) {		
 		this.theta += +a ;
