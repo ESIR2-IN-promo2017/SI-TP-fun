@@ -1342,21 +1342,21 @@
 			// debug 
 			console.log('atomicGL - Rémi COZOT - 2015');
 		}				
-		if (currentlyPressedKeys[68]) // (D) Right
+		if (currentlyPressedKeys[68] || currentlyPressedKeys[39]) // (D) Right
 		{
 			// debug 
 			cam.right();		}
-		if (currentlyPressedKeys[81]) // (Q) Left 
+		if (currentlyPressedKeys[81] || currentlyPressedKeys[37]) // (Q) Left 
 		{		
 			// debug 
 			cam.left();			//
 		}
-		if (currentlyPressedKeys[90]) // (Z) Up
+		if (currentlyPressedKeys[90] || currentlyPressedKeys[38]) // (Z) Up
 		{
 			// debug 
 			cam.up();			//
 		}
-		if (currentlyPressedKeys[83]) // (S) Down 
+		if (currentlyPressedKeys[83] || currentlyPressedKeys[40]) // (S) Down 
 		{
 			// debug 
 			cam.down();			//
