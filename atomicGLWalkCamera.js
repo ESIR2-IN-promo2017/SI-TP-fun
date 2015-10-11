@@ -51,16 +51,36 @@ atomicGLWalkCamera = function(){
 		this.xc +=	-this.step*Math.cos(this.theta*3.14/180.0);
 		this.zc += 	-this.step*Math.sin(this.theta*3.14/180.0);
 	}
-	this.jump_up = function () {
-			this.yc += height;
-			
-			//On fait une pause pour marquer le saut puis on revient à la position initiale
-			//jump_down(height,1000);
-			
+	
+	this.upRight= function () {
+		this.xc +=	+this.step*2*Math.sin(this.theta*3.14/180.0);
+		this.zc += 	-this.step*2*Math.cos(this.theta*3.14/180.0);
+		this.xc +=	-this.step*2*Math.sin(this.theta*3.14/180.0);
+		this.zc +=	+this.step*2*Math.cos(this.theta*3.14/180.0);
+		this.theta+= 1.5;
 	}
-	this.jump_down = function () {
-		this.yc -= height;
+	this.upLeft= function () {
+		this.xc +=	+this.step*2*Math.sin(this.theta*3.14/180.0);
+		this.zc += 	-this.step*2*Math.cos(this.theta*3.14/180.0);
+		this.theta-= 1.5;
+		this.xc +=	-this.step*2*Math.sin(this.theta*3.14/180.0);
+		this.zc +=	+this.step*2*Math.cos(this.theta*3.14/180.0);
 	}
+	this.high= function () {
+		if(this.yc<20)
+		this.yc += 0.2;
+	}
+	this.lessHigh= function () {
+		if(this.yc >1)
+			this.yc -= 0.2;
+	}
+	this.jumpUp = function () {  
+		this.yc+=0.2;
+	}
+	this.jumpDown = function () {  
+		this.yc-=0.2;
+	}
+	
 	this.turnright 	= function (a) {
 		limit = 0.02;
 		if( a >= limit || a <= -limit) {
@@ -73,12 +93,3 @@ atomicGLWalkCamera = function(){
 	this.turnup = function(a){this.phi = a;}
 
 }
-
-// function jump_down(height,miliseconds) {
-           // var currentTime = new Date().getTime();
-
-           // while (currentTime + miliseconds >= new Date().getTime()) {
-           // }
-		   
-		   // this.yc -= height;
-       // }

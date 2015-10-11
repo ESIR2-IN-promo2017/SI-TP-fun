@@ -766,6 +766,13 @@
 
 	// camera
 	var cam = new atomicGLWalkCamera();
+	
+	// Jump
+	var jumpUp=false;
+	var jumpDown=false;
+	var jump=false;
+	var compteur=0;
+	
 	// OpenGL context
 	var agl = new atomicGLContext();	
 	// clock
@@ -1361,17 +1368,53 @@
 			// debug 
 			cam.down();			//
 		}
-		if (currentlyPressedKeys[32]) // (SPACE BAR) Jump up
-		{
-			//debug	
-			cam.jump_up();
-			//cam.jump_down(); -> ne fait pas l'effort de monter et de descendre ><
+		if (currentlyPressedKeys[69]) // (E) UpRight 
+		{		
+			// debug 
+			cam.upRight();			
 		}
-		if (currentlyPressedKeys[13]) //(ENTER) Jump down
-		{
-			//debug	
-			cam.jump_down();
+		if (currentlyPressedKeys[65]) // (A) UpLeft 
+		{		
+			// debug 
+			cam.upLeft();			
 		}
+		if (currentlyPressedKeys[90]) // (Z) Up
+		{
+			// debug 
+			cam.up();			//
+		}
+		if (currentlyPressedKeys[83]) // (S) Down 
+		{
+			// debug 
+			cam.down();			//
+		}
+		if (currentlyPressedKeys[32]) // (Space) High 
+		{
+			// debug 
+			cam.high();			//
+		}
+		if (currentlyPressedKeys[87]) // (W) Less High
+		{
+			// debug 
+			cam.lessHigh();			//
+		}
+		if (currentlyPressedKeys[13]) // (Enter) Jump     // passer un parametre pour avancer dans le temps, pas instant
+		{
+			// debug
+			jump=true;
+		}
+		// on accorde le saut
+		if(jump== true && compteur==0) jumpUp=true;
+		// vers le haut
+		if(jumpUp==true) {cam.jumpUp(); compteur+=0.5;}
+		// vers le bas
+		if(jumpDown==true) {cam.jumpDown(); compteur+=0.5;}
+		// si on est dans la premiere phase du saut, le saut debute
+		if(compteur>0 && compteur<10) {jumpUp=true};
+		// si on est dans la seconde phase du saut, on retombe
+		if(compteur>=10 && compteur<20) {jumpUp=false; jumpDown=true;}
+		// le saut est termine, tout est remis a zero
+		if(compteur>=20){jumpUp=false;jumpDown=false;compteur=0;jump=false;}
 	}
 	
 	// mouse
