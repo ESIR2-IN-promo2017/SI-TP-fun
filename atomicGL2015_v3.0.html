@@ -758,6 +758,9 @@
 	var mouseX = 0.0;
 	var mouseY = 0.0;
 	document.onmousemove = onDocumentMouseMove;
+	document.onmousedown = handleMouseDown;
+	document.onmouseup = handleMouseUp;
+	var mouseDown = false;
 
 	var currentlyPressedKeys = {};
 	//	keyboard callbacks 
@@ -812,7 +815,7 @@
 	var ground_wall  = new atomicGLObj('solmuret', 		new sol_muret(),		1.0,1.0) ;
 	var ground_sand  = new atomicGLObj('solsable', 		new sol_sable(),		0.1,0.1) ;
 				
-	var house3mur 		= new atomicGLObj('maison3', 		new maison3(),		1.0,1.0) ;
+	var house3mur 	= new atomicGLObj('maison3', 		new maison3(),		1.0,1.0) ;
 	var house3roof 	= new atomicGLObj('maison3roof', 	new maison3roof(),	1.0,1.0) ;
 	var house3wood 	= new atomicGLObj('maison3wood', 	new maison3wood(),	1.0,1.0) ;
 	
@@ -826,7 +829,7 @@
 	var tower1toit 	= new atomicGLObj('tour1toit', 		new tour1toit(),	1.0,1.0) ;
 
 	var wall2base	= new atomicGLObj('wall1base', 		new mur2base(),		0.2,0.2) ;
-	var wall2stone = new atomicGLObj('wall2stone', 		new mur2pierre(),	1.0,1.0) ;
+	var wall2stone 	= new atomicGLObj('wall2stone', 		new mur2pierre(),	1.0,1.0) ;
 	var wall2wood	= new atomicGLObj('wall2wood', 		new mur2bois(),		1.0,1.0) ;
 	var wall2roof 	= new atomicGLObj('wall2roof', 		new mur2toit(),		1.0,1.0) ;
 
@@ -1393,7 +1396,7 @@
 			// debug 
 			cam.high();			//
 		}
-		if (currentlyPressedKeys[87]) // (W) Less High
+		if (currentlyPressedKeys[87] || currentlyPressedKeys[27]) // (W) or (ESC) Less High 
 		{
 			// debug 
 			cam.lessHigh();			//
@@ -1420,9 +1423,19 @@
 	// mouse
 	// ------------------------------
 	function onDocumentMouseMove( event ) {
-		omouseX = mouseX ;
-		mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
-		mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
+		if(mouseDown) {		
+			//omouseX = mouseX;
+			mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
+			mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
+		}
+	}
+	
+	function handleMouseDown (event) {
+		mouseDown = true;
+	}
+	
+	function handleMouseUp (event) {
+		mouseDown = false;
 	}
 
 </script>
