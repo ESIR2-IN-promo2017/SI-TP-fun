@@ -20,6 +20,13 @@ atomicGLWalkCamera = function(){
 	this.xc = 0.0 ;
 	this.yc = 2.0 ;
 	this.zc = 0.0 ;
+
+	// arm position
+	this.xa = 0.35;
+	this.ya = 1.6;
+	this.za = -1.7;
+
+
 	// camera orientation
 	this.theta = 0.0 ;
 	this.phi = 0.0 ;
@@ -43,6 +50,9 @@ atomicGLWalkCamera = function(){
 	this.isWalking =  false;
 	this.isIdle =  true;
 
+
+	this.O3D_armTransform;
+
 	
 	// methods
 	// --------------------------------------------------
@@ -51,30 +61,53 @@ atomicGLWalkCamera = function(){
 	this.up 	= function () {
 		this.xc +=	+this.step*Math.sin(this.theta*3.14/180.0);
 		this.zc += 	-this.step*Math.cos(this.theta*3.14/180.0);
+		this.xa +=	+this.step*Math.cos(this.theta*3.14/180.0);
+		this.za += 	-this.step*Math.sin(this.theta*3.14/180.0);
+		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],
+												[-0.1,1,0],180.0);
 	}
 	this.down 	= function () {
 		this.xc +=	-this.step*Math.sin(this.theta*3.14/180.0);
 		this.zc +=	+this.step*Math.cos(this.theta*3.14/180.0);
+		this.xa +=	-this.step*Math.cos(this.theta*3.14/180.0);
+		this.za += 	+this.step*Math.sin(this.theta*3.14/180.0);
+		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],
+												[-0.1,1,0],180.0);
+
 	}
 	this.right 	= function () {
 		this.xc +=	+this.step*Math.cos(this.theta*3.14/180.0);
 		this.zc += 	+this.step*Math.sin(this.theta*3.14/180.0);
+		this.xa +=	+this.step*Math.cos(this.theta*3.14/180.0);
+		this.za += 	+this.step*Math.sin(this.theta*3.14/180.0);
+		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],
+												[-0.1,1,0],180.0);
 	}
 	this.left 	= function () {
 		this.xc +=	-this.step*Math.cos(this.theta*3.14/180.0);
 		this.zc += 	-this.step*Math.sin(this.theta*3.14/180.0);
+		this.xa +=	-this.step*Math.cos(this.theta*3.14/180.0);
+		this.za += 	-this.step*Math.sin(this.theta*3.14/180.0);
+		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],
+												[-0.1,1,0],180.0);
 	}
 	this.jump_up = function () {
 			this.yc += this.step;
 			this.isIdle= false;
 			this.isJumpingDown=false;
 			this.isJumpingUp=true;
+			this.O3D_armTransform.setTransform([this.xa,this.ya+=this.step,this.za],
+												[-0.1,1,0],180.0);
+
 	}
 	this.jump_down = function () {
 			this.yc -= this.step;
 			this.isIdle= false;
 			this.isJumpingDown=true;
 			this.isJumpingUp=false;
+			this.O3D_armTransform.setTransform([this.xa,this.ya-=this.step,this.za],
+												[-0.1,1,0],180.0);
+
 	}
 	this.turnright 	= function (a) {
 		limit = 0.02;
@@ -92,32 +125,42 @@ atomicGLWalkCamera = function(){
 		this.isJumpingDown=false;
 		this.isJumpingUp=false;
 		this.timeOut = 0.0;
+		this.yc = 2.0 ;
+		this.O3D_armTransform.setTransform([this.xa,this.ya=1.6,this.za],
+												[-0.1,1,0],180.0);
 	}
 
-	this.stateMachineAnimation = function () {
 
-			if(cam.isJumpingUp && !cam.isJumpingDown){
-    		cam.timeOut += .04;
+	/****************************
+	Manage the Animation of the player
+	********************************/
+	this.stateMachineAnimation = function () {
+		if(cam.isJumpingUp && !cam.isJumpingDown){
+    		cam.timeOut += .045;
     		cam.jump_up();
     		if(cam.timeOut>1.0)
     			cam.isJumpingDown=true;
     	}
     	if(cam.isJumpingDown){
-		    cam.timeOut += .04;
+		    cam.timeOut += .045;
     		cam.jump_down();
     		if(cam.timeOut>2.0)
     			cam.idle();
     	}
-
 	}
 
+
+	this.initPlayer=function(arm2,textProgId,sg) {
+
+		var O3D_arm = new atomicGLSceneGraph('object3D','wall2roof');
+		O3D_arm.setObject3D(arm2,textProgId);
+
+		this.O3D_armTransform = new atomicGLSceneGraph('transform','arm2');
+		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],[-0.1,1,0],180.0);
+		this.O3D_armTransform.addChild(O3D_arm);
+		sg.addChild(this.O3D_armTransform) ;
+	}
+
+
+
 }
-
-// function jump_down(height,miliseconds) {
-           // var currentTime = new Date().getTime();
-
-           // while (currentTime + miliseconds >= new Date().getTime()) {
-           // }
-		   
-		   // this.yc -= height;
-       // }
