@@ -1,3 +1,4 @@
+
 <html>
 <head>
 	<title>atomicGL DEBUG </title>
@@ -758,9 +759,6 @@
 	var mouseX = 0.0;
 	var mouseY = 0.0;
 	document.onmousemove = onDocumentMouseMove;
-	document.onmousedown = handleMouseDown;
-	document.onmouseup = handleMouseUp;
-	var mouseDown = false;
 
 	var currentlyPressedKeys = {};
 	//	keyboard callbacks 
@@ -769,13 +767,6 @@
 
 	// camera
 	var cam = new atomicGLWalkCamera();
-	
-	// Jump
-	var jumpUp=false;
-	var jumpDown=false;
-	var jump=false;
-	var compteur=0;
-	
 	// OpenGL context
 	var agl = new atomicGLContext();	
 	// clock
@@ -785,6 +776,7 @@
 	// sceneGraph
 	var sg = new atomicGLSceneGraph("root","SG_root");
 
+	var time =0.0;
 	// texture
 		var test, test_normal;
 		var mur_pierre1, mur_pierre1_normal;
@@ -815,7 +807,7 @@
 	var ground_wall  = new atomicGLObj('solmuret', 		new sol_muret(),		1.0,1.0) ;
 	var ground_sand  = new atomicGLObj('solsable', 		new sol_sable(),		0.1,0.1) ;
 				
-	var house3mur 	= new atomicGLObj('maison3', 		new maison3(),		1.0,1.0) ;
+	var house3mur 		= new atomicGLObj('maison3', 		new maison3(),		1.0,1.0) ;
 	var house3roof 	= new atomicGLObj('maison3roof', 	new maison3roof(),	1.0,1.0) ;
 	var house3wood 	= new atomicGLObj('maison3wood', 	new maison3wood(),	1.0,1.0) ;
 	
@@ -829,7 +821,7 @@
 	var tower1toit 	= new atomicGLObj('tour1toit', 		new tour1toit(),	1.0,1.0) ;
 
 	var wall2base	= new atomicGLObj('wall1base', 		new mur2base(),		0.2,0.2) ;
-	var wall2stone 	= new atomicGLObj('wall2stone', 		new mur2pierre(),	1.0,1.0) ;
+	var wall2stone = new atomicGLObj('wall2stone', 		new mur2pierre(),	1.0,1.0) ;
 	var wall2wood	= new atomicGLObj('wall2wood', 		new mur2bois(),		1.0,1.0) ;
 	var wall2roof 	= new atomicGLObj('wall2roof', 		new mur2toit(),		1.0,1.0) ;
 
@@ -1332,9 +1324,12 @@
     function animate(){
     	// increase time
     	sceneClock.tick() ;
-    	Yangle = Yangle + 0.01*sceneClock.get();
-		waveTime = waveTime + 0.005*sceneClock.get();
-    	wtextProg.wTime = waveTime ;
+		time = time+ 0.001*sceneClock.get();
+
+    	wtextProg.wTime = time;
+    	
+    	cam.stateMachineAnimation();
+    
     }
 	
 	// keyboard
@@ -1343,8 +1338,8 @@
 	function handleKeyUp(event) 	{currentlyPressedKeys[event.keyCode] = false;}
 
 	function handleKeys() {
-		if (Math.abs(mouseX)>0.1){
-			cam.turnright(1.0*(mouseX*mouseX*mouseX));
+		if (Math.abs(mouseX)>0.24){
+			cam.turnright(3.0*(mouseX*mouseX*mouseX));
 		}
 		cam.turnup(45*mouseY);
 		if (currentlyPressedKeys[67]) // (C) debug
@@ -1371,71 +1366,27 @@
 			// debug 
 			cam.down();			//
 		}
-		if (currentlyPressedKeys[69]) // (E) UpRight 
-		{		
-			// debug 
-			cam.upRight();			
-		}
-		if (currentlyPressedKeys[65]) // (A) UpLeft 
-		{		
-			// debug 
-			cam.upLeft();			
-		}
-		if (currentlyPressedKeys[90]) // (Z) Up
+		if (currentlyPressedKeys[32]) // (SPACE BAR) Jump up
 		{
-			// debug 
-			cam.up();			//
+			//debug	
+			if(cam.isIdle){
+				cam.isJumping =true;
+				cam.jump_up();
+			}
 		}
-		if (currentlyPressedKeys[83]) // (S) Down 
+		/*if (currentlyPressedKeys[13]) //(ENTER) Jump down
 		{
-			// debug 
-			cam.down();			//
-		}
-		if (currentlyPressedKeys[32]) // (Space) High 
-		{
-			// debug 
-			cam.high();			//
-		}
-		if (currentlyPressedKeys[87] || currentlyPressedKeys[27]) // (W) or (ESC) Less High 
-		{
-			// debug 
-			cam.lessHigh();			//
-		}
-		if (currentlyPressedKeys[13]) // (Enter) Jump    
-		{
-			// debug
-			jump=true;
-		}
-		// on accorde le saut
-		if(jump== true && compteur==0) jumpUp=true;
-		// vers le haut
-		if(jumpUp==true) {cam.jumpUp(); compteur+=0.5;}
-		// vers le bas
-		if(jumpDown==true) {cam.jumpDown(); compteur+=0.5;}
-		// si on est dans la premiere phase du saut, le saut debute
-		if(compteur>0 && compteur<10) {jumpUp=true};
-		// si on est dans la seconde phase du saut, on retombe
-		if(compteur>=10 && compteur<20) {jumpUp=false; jumpDown=true;}
-		// le saut est termine, tout est remis a zero
-		if(compteur>=20){jumpUp=false;jumpDown=false;compteur=0;jump=false;}
+			//debug	
+			
+		}*/
 	}
 	
 	// mouse
 	// ------------------------------
 	function onDocumentMouseMove( event ) {
-		if(mouseDown) {		
-			//omouseX = mouseX;
-			mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
-			mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
-		}
-	}
-	
-	function handleMouseDown (event) {
-		mouseDown = true;
-	}
-	
-	function handleMouseUp (event) {
-		mouseDown = false;
+		omouseX = mouseX ;
+		mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
+		mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
 	}
 
 </script>
@@ -1443,6 +1394,6 @@
 
 <body onload="webGLStart();">
 	<br>
-    <canvas id="oglcanvas" style="border: none;" width="1600" height="900"></canvas>
+    <canvas id="oglcanvas" style="border: none;" width="1920" height="1080"></canvas>
 	<br>
 </body></html>

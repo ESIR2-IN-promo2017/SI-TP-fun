@@ -27,9 +27,22 @@ atomicGLWalkCamera = function(){
 	this.step = 0.10 ;
 	// rot
 	this.rot = 0.5 ;
-	
+
+	//temps qui servira a effectué les transitions entre les animations
+	this.timeOut =0.0;	
 	//Hauteur du saut
 	var height = 2;
+
+
+
+/********************************************
+	Variable d'état d'animation
+************************************************/
+	this.isJumpingUp = false;
+	this.isJumpingDown = false;
+	this.isWalking =  false;
+	this.isIdle =  true;
+
 	
 	// methods
 	// --------------------------------------------------
@@ -51,36 +64,18 @@ atomicGLWalkCamera = function(){
 		this.xc +=	-this.step*Math.cos(this.theta*3.14/180.0);
 		this.zc += 	-this.step*Math.sin(this.theta*3.14/180.0);
 	}
-	
-	this.upRight= function () {
-		this.xc +=	+this.step*2*Math.sin(this.theta*3.14/180.0);
-		this.zc += 	-this.step*2*Math.cos(this.theta*3.14/180.0);
-		this.xc +=	-this.step*2*Math.sin(this.theta*3.14/180.0);
-		this.zc +=	+this.step*2*Math.cos(this.theta*3.14/180.0);
-		this.theta+= 1.5;
+	this.jump_up = function () {
+			this.yc += this.step;
+			this.isIdle= false;
+			this.isJumpingDown=false;
+			this.isJumpingUp=true;
 	}
-	this.upLeft= function () {
-		this.xc +=	+this.step*2*Math.sin(this.theta*3.14/180.0);
-		this.zc += 	-this.step*2*Math.cos(this.theta*3.14/180.0);
-		this.theta-= 1.5;
-		this.xc +=	-this.step*2*Math.sin(this.theta*3.14/180.0);
-		this.zc +=	+this.step*2*Math.cos(this.theta*3.14/180.0);
+	this.jump_down = function () {
+			this.yc -= this.step;
+			this.isIdle= false;
+			this.isJumpingDown=true;
+			this.isJumpingUp=false;
 	}
-	this.high= function () {
-		if(this.yc<20)
-		this.yc += 0.2;
-	}
-	this.lessHigh= function () {
-		if(this.yc >1)
-			this.yc -= 0.2;
-	}
-	this.jumpUp = function () {  
-		this.yc+=0.2;
-	}
-	this.jumpDown = function () {  
-		this.yc-=0.2;
-	}
-	
 	this.turnright 	= function (a) {
 		limit = 0.02;
 		if( a >= limit || a <= -limit) {
@@ -92,4 +87,37 @@ atomicGLWalkCamera = function(){
 	}
 	this.turnup = function(a){this.phi = a;}
 
+	this.idle = function(){
+		this.isIdle = true;
+		this.isJumpingDown=false;
+		this.isJumpingUp=false;
+		this.timeOut = 0.0;
+	}
+
+	this.stateMachineAnimation = function () {
+
+			if(cam.isJumpingUp && !cam.isJumpingDown){
+    		cam.timeOut += .04;
+    		cam.jump_up();
+    		if(cam.timeOut>1.0)
+    			cam.isJumpingDown=true;
+    	}
+    	if(cam.isJumpingDown){
+		    cam.timeOut += .04;
+    		cam.jump_down();
+    		if(cam.timeOut>2.0)
+    			cam.idle();
+    	}
+
+	}
+
 }
+
+// function jump_down(height,miliseconds) {
+           // var currentTime = new Date().getTime();
+
+           // while (currentTime + miliseconds >= new Date().getTime()) {
+           // }
+		   
+		   // this.yc -= height;
+       // }

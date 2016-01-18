@@ -115,4 +115,11 @@ atomicGLContext = function(){
 		//console.log("-- atomicGLContext::pushProgram("+prog.name+")-> index:"+id);
 		return  id ;
 	}
+
+	this.getLastProgram= function(prog){ 
+		// debug
+		//console.log("atomicGLContext::pushProgram");
+		return this.shaderPrograms[this.shaderPrograms.length -1]; 
+		
+	}
 }

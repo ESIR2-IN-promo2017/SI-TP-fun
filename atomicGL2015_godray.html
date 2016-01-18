@@ -1,0 +1,681 @@
+<html>
+<head>
+	 <title>God Ray - ESIR 2 IN </title>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+	<script type="text/javascript" src="gltp1_fichiers/glMatrix-0.js"></script>
+	<script type="text/javascript" src="gltp1_fichiers/webgl-utils.js"></script>
+
+	<!-- ATOMICGL ENGINE -->
+	<!-- load "modules" -->
+	<script type="text/javascript" src="atomicGLContext.js"></script>
+	<script type="text/javascript" src="atomicGLMatrixStack.js"></script>
+	
+	<script type="text/javascript" src="atomicGLClock.js"></script>
+	<script type="text/javascript" src="atomicGLTexture.js"></script>
+
+	<script type="text/javascript" src="atomicGLShader.js"></script>
+	<script type="text/javascript" src="atomicGLGodRayShader.js"></script>
+	<script type="text/javascript" src="atomicGLGodRay.js"></script>
+
+	<script type="text/javascript" src="atomicGLCube.js"></script>
+	<script type="text/javascript" src="atomicGLxyPlane.js"></script>
+	<script type="text/javascript" src="atomicGLxzPlane.js"></script>
+	<script type="text/javascript" src="atomicGLSphere.js"></script>
+
+
+
+<script id="vertex_GodRay" type="x-shader/x-vertex">
+	// vertex shader
+	
+attribute vec2 pos; 
+
+
+void main() {
+
+ gl_Position = vec4(pos.xy,0.0,.3);
+
+  }
+
+</script>
+	<script id="frag_GodRay" type="x-shader/x-fragment">
+
+
+#ifdef GL_ES
+precision highp float;
+#endif
+uniform float uTime ;
+//uniform int uVolum ;
+
+void mainImage( out vec4 c,  in vec2 f );
+// Ray tracing with improvised volumetric shadows
+
+float time = uTime;
+vec3 resolution = vec3(200.);
+
+const float ZMAX = 100.0;
+const float EPSILON = 0.001;
+const int VOLUMETRIC_SAMPLES = 20;
+
+struct Intersection
+{
+	vec3 p;
+	float dist;
+	
+	vec3 n;
+	vec3 diffuse;
+	vec3 specular;
+};
+	
+struct Ray
+{
+	vec3 o;
+	vec3 dir;
+};
+	
+struct Light
+{
+	vec3 p;
+	vec3 color;
+	float radius;
+};
+	
+struct Plane
+{
+	vec3 n;
+	float d;
+};
+	
+struct Sphere
+{
+	vec3 c;
+	float r;
+};
+	
+float saturate(float f)
+{
+	return clamp(f,0.0,1.0);
+}
+
+vec3 saturate(vec3 v)
+{
+	return clamp(v,vec3(0,0,0),vec3(1,1,1));
+}
+
+float rand(vec2 co)
+{
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453 + time);
+}
+
+Intersection RaySphere(Ray ray, Sphere sphere)
+{
+	Intersection i;
+	i.dist = ZMAX;
+	vec3 c = sphere.c;
+	float r = sphere.r;
+	vec3 e = c-ray.o;
+	float a = dot(e, ray.dir);
+	float b = r*r - dot(e,e) + a*a;
+	if( b>0.0 )
+	{
+		float f = sqrt(b);
+		float t = a - f;
+		if(t > EPSILON)
+		{
+			i.p = ray.o + ray.dir*t;
+			i.n = normalize(i.p-c);
+			i.dist = t;
+		}
+	}
+	return i;
+}
+
+Intersection RayPlane(Ray ray, Plane p)
+{
+	Intersection i;
+	float num = p.d-dot(p.n, ray.o);
+	float denom = dot(p.n, ray.dir);
+	float t = num/denom;
+	if(t > EPSILON)
+	{
+		i.p = ray.o + ray.dir * t;
+		i.n = p.n;
+		i.dist = t;
+	}
+	else
+	{
+		i.dist = ZMAX;
+	}
+	return i;
+}
+
+Intersection MinIntersection(Intersection a, Intersection b)
+{
+	if(a.dist < b.dist)
+	{
+		return a;
+	}
+	else
+	{
+		return b;
+	}
+}
+
+vec3 PlaneMaterial(Intersection i)
+{
+	float d = 0.0;
+	d = mod(floor(i.p.x)+floor(i.p.z),2.0);
+	return vec3(d,d,d)*0.8;
+}
+
+Intersection SceneIntersection(Ray r)
+{
+	Intersection iOut;
+	
+	Plane plane;
+	plane.n = normalize(vec3(0,1,0));
+	plane.d = -2.0;
+	Intersection iPlane = RayPlane(r, plane);
+	iPlane.diffuse = PlaneMaterial(iPlane);
+	iPlane.specular = vec3(1,1,1)-iPlane.diffuse;
+	iOut = iPlane;
+	
+	for(int s = 0; s <= 3; s++)
+	{
+		float fs = float(s);
+		float t = time*0.3+fs*2.0;
+		vec3 pos;
+		pos.x = sin(t*2.0)*2.0+sin(t*2.0)*3.0;
+		pos.y = abs(sin(t))*2.0;
+		pos.z = 6.0+cos(t)*2.0+cos(t*1.5)*2.0;
+		Sphere sphere;
+		sphere.c = pos;
+		sphere.r = 2.0;
+		Intersection iSphere = RaySphere(r, sphere);
+		iSphere.diffuse = vec3(0.0,0.0,0.2);
+		iSphere.specular = vec3(0.2,0.2,0.6);
+		iOut = MinIntersection(iOut, iSphere);
+	}
+	
+	return iOut;
+}
+
+vec3 CalcIrradiance(Light light, vec3 p)
+{
+	float distA = 1.0-saturate(length(light.p-p)/light.radius);
+	return distA * light.color;
+}
+
+vec3 CalcLighting(Light light, Intersection i, vec3 origin)
+{
+	vec3 n = i.n;
+	vec3 p = i.p;
+	vec3 l = normalize(light.p-p);
+	vec3 v = normalize(origin-p);
+	vec3 h = normalize(l+v);
+	float NdotL = saturate(dot(n,l));
+	float NdotH = saturate(dot(n,h));
+	vec3 diffuse = NdotL*i.diffuse;
+	vec3 spec = pow(NdotH,8.0) * i.specular;
+	float distA = 1.0-saturate(length(light.p-p)/light.radius);
+	vec3 color;
+	color = (diffuse+spec) * distA * light.color;
+	
+	float shadow = 1.0;
+	Ray shadowRay;
+	shadowRay.o = i.p;
+	float lightDist = length(light.p-i.p);
+	shadowRay.dir = (light.p-i.p)/lightDist;
+	Intersection shadowI = SceneIntersection(shadowRay);
+	if(shadowI.dist < lightDist)
+	{
+		shadow = 0.0;
+	}
+	color *= shadow;
+	
+	return color;
+}
+
+vec3 GetLighting(Intersection i, vec3 origin)
+{
+	vec3 color = vec3(0,0,0);
+	Light light;
+	
+	light.p = vec3(sin(time*0.3)*2.0,5,cos(time*0.3)*2.0+4.0);
+	light.color = vec3(1,1,1);
+	light.radius = 20.0;
+	color += CalcLighting(light, i, origin);
+	return color;
+}
+
+vec3 GetVolumetricLighting(Ray ray, float maxDist, vec2 fragCoord)
+{
+	vec3 color = vec3(0,0,0);
+	Light light;
+	light.p = vec3(sin(time*0.3)*2.0,5,cos(time*0.3)*2.0+4.0);
+	light.color = vec3(1,1,1);
+	light.radius = 20.0;
+	
+	float inscattering = maxDist/200.0;
+	float volRayStep = maxDist/float(VOLUMETRIC_SAMPLES-1);
+	float randomStep = rand(fragCoord.xy)*volRayStep;
+	Ray volRay;
+	volRay.o = ray.o + ray.dir*randomStep;
+	for(int v = 0; v < VOLUMETRIC_SAMPLES; v++)
+	{
+		vec3 lightVec = light.p-volRay.o;
+		float lightDist = length(lightVec);
+		volRay.dir = lightVec/lightDist;
+		Intersection i = SceneIntersection(volRay);
+		if(i.dist > lightDist)
+		{
+			color += CalcIrradiance(light, volRay.o)*inscattering;
+		}
+		volRay.o += ray.dir * volRayStep;
+	}
+	
+	return color;
+}
+
+vec3 GetColor(Ray ray, vec2 fragCoord)
+{
+	vec3 color = vec3(0,0,0);
+	vec3 volumetric = vec3(0,0,0);
+	vec3 prevSpecular = vec3(1.0,1.0,1.0);
+	
+	// Branch version
+	Intersection i = SceneIntersection(ray);
+	// Volumetrics
+	volumetric = GetVolumetricLighting(ray, min(i.dist, 20.0), fragCoord);
+	vec3 specular;
+	vec3 incident;
+	if(i.dist < ZMAX-EPSILON)
+	{
+		color += GetLighting(i, ray.o);
+		specular = i.specular;
+		incident = normalize(i.p-ray.o);
+		ray.dir = reflect(incident,i.n);
+		ray.o = i.p+ray.dir*EPSILON;
+		// First bounce
+		i = SceneIntersection(ray);
+		if(i.dist < ZMAX-EPSILON)
+		{
+			color += GetLighting(i, ray.o) * specular;
+			specular *= i.specular;
+			incident = normalize(i.p-ray.o);
+			ray.dir = reflect(incident,i.n);
+			ray.o = i.p+ray.dir*EPSILON;
+			// Second bounce
+			i = SceneIntersection(ray);
+			if(i.dist < ZMAX-EPSILON)
+			{
+				color += GetLighting(i, ray.o) * specular;
+			}
+		}
+	}
+	color -= volumetric*0.5; // Ho ho ho.
+	color += volumetric;
+	return color;
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+	vec2 pos = -1.0 + 2.0 * ( fragCoord.xy / resolution.xy );
+	vec2 posAR;
+	posAR.x = pos.x * (resolution.x/resolution.y);
+	posAR.y = pos.y;
+	vec3 rayDir = normalize(vec3(posAR.x, posAR.y, 1.0));
+	Ray ray;
+	ray.o = vec3(sin(time*0.2),0,0);
+	ray.dir = rayDir;
+	
+	vec3 color = GetColor(ray, fragCoord);
+	fragColor = vec4(color.x, color.y, color.z, 1.0 );
+}
+void main( void ){
+	vec4 color = vec4(0.0,0.0,0.0,1.0);
+	mainImage( color, gl_FragCoord.xy );
+	color.w = 1.0;
+	gl_FragColor = color;
+}
+</script>
+
+	<!-- SHADER: diffus per fragment -->
+	<!-- diffuse shader -->
+	<script id="vertex_diffuse" type="x-shader/x-vertex">
+	// vertex shader
+	// ------------------------------------------------------
+	// diffuse shader
+	// per fragment 
+	// lights nb: 1
+	// ------------------------------------------------------
+
+	// attributes inputs  (vertex arrays)
+		attribute vec3 aVertexPosition;
+		attribute vec3 aVertexNormal;
+		attribute vec3 aVertexColor;
+
+	// uniform matrices
+		uniform mat4 uMVMatrix;
+		uniform mat4 uPMatrix;
+		uniform mat3 uNMatrix;
+
+	// output (to fragment shader)
+		varying vec4 vPosition;
+		varying vec3 vNormal;
+		varying vec3 vcolor;
+
+	void main(void) {
+		// model -> view 
+		vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+		gl_Position = uPMatrix * vPosition;
+		// vNormal
+		vNormal = uNMatrix * aVertexNormal;	
+		// vcolor
+		vcolor = aVertexColor;
+	}
+</script>
+<script id="frag_diffuse" type="x-shader/x-fragment">
+	#ifdef GL_ES
+		precision highp float;
+	#endif
+
+	// fragment shader
+	// ------------------------------------------------------
+	// diffuse shader
+	// per fragment 
+	// lights nb: 1
+	// ------------------------------------------------------
+
+	// varying input (output of the vertex shader)
+		varying vec4 vPosition;
+		varying vec3 vNormal;
+		varying vec3 vcolor;
+		
+	// lights
+
+		//point light ie omni dir:  location, color
+		uniform vec3 uPointLightPosition0;
+		uniform vec3 uPointLightColor0;
+
+
+	// local constant
+		// Kd: diffuse speed
+		float Kd = 1.0 ;
+	
+	// main
+    void main(void) {	
+		// light direction
+		vec3 lightDirection = normalize(uPointLightPosition0 - vPosition.xyz);
+
+		// eye direction
+		vec3 eyeDirection = normalize(-vPosition.xyz);
+
+		// normalize normal
+		vec3 normal = normalize(vNormal);
+		//  diffuse term
+		float diffuseLightWeight = max(dot(normal, lightDirection), 0.0);
+			
+		// light color
+         vec3 lightColor =  Kd*diffuseLightWeight*(uPointLightColor0)*vcolor  ;
+
+        gl_FragColor = vec4(lightColor,1.0);
+    }
+</script>
+
+	<!-- ATOMICGL ENGINE -->
+	<!-- create objects -->
+	<!-- wegGLStart function (required) -->
+	<script type="text/javascript">
+	//------------------------------------------------------------------------------
+
+	// OpenGL context
+	var agl = new atomicGLContext();
+	
+	// clock
+	var sceneClock =new atomicGLClock() ;
+
+	// matrix stack
+	var ams =new atomicGLMatrixStack();
+
+
+
+	var uTime;
+
+
+	var speed = 0.0;
+	var intensity = 0.0;
+	var reach= 0.0;
+	var occlusion= 0.0;
+
+
+	// diffus
+	var diffusProg ;
+	var diffusProgId ;
+
+	var GodRayProg;
+	var GodRayProgId;
+	
+	var waveTime = 0.0 ;
+	var sphere 		= new atomicGLSphere("sphere",0.5,64,64);
+	var sphere1 		= new atomicGLSphere("sphere",0.5,64,64);
+
+	// animation
+	
+
+	//webGLStart
+	function webGLStart() {
+	// init
+	// -----------------------------
+		// recover penGL canvas 
+		var canvas = document.getElementById("oglcanvas");
+
+		// init OpenGL context
+		agl.initGL(canvas,[0.0,0.0,0.0]);
+		
+		// light
+	//	agl.pushLight([1.0,-2.1,-20.0],[1.0,1.0,1.0]); // position, color
+		//	agl.pushLight([1.1,-2.2,-20.0],[1.0,.0,.0]); // position, color
+	//	agl.pushLight([2.2,10,-25.0],[1.0,1.0,1.0]); // position, color
+
+		//agl.ambientLightColor = [0.01,0.01,0.2];	// color
+
+		// init Matrix Stack
+		ams.initMatrix(agl,45); // fov = 45 degrees
+
+
+		// load shaders
+		diffusProg 		= new atomicGLShader("diffus", agl,"frag_diffuse", "vertex_diffuse" ,false,1);
+		
+		GodRayProg = new atomicGLGodRay("godRay", agl,"frag_GodRay", "vertex_GodRay" ,false,1);
+
+		// push shader in context
+		diffusProgId 		= agl.pushProgram(diffusProg);
+	
+		GodRayProgId 	= agl.pushProgram(GodRayProg);
+		GodRayProgId.uTime=0.0;
+		// sphere
+		sphere.setFaceColor("All",[1.0,1.0,1.0]);
+		sphere.initGLBuffers(agl);
+		sphere1.initGLBuffers(agl)
+
+		 
+		// start the animation
+		nextFrame();
+	}
+		
+	// draw
+	// -----------------------------
+	function sceneDraw(){
+		agl.initDraw();
+
+		// global transform
+		// ------------------------------
+		// push matrix
+		ams.mvPushMatrix();
+		// position & orientation	
+
+			//ams.mvTranslate(0,-20,-50);
+			ams.mvTranslate(0,-15,-30);
+
+		
+			// sphere
+			// ---------------------------------------
+			// push matrix
+			ams.mvPushMatrix();
+				// position & orientation
+				ams.mvTranslate(0.0,0.5,0);
+				// draw
+				sphere.draw(agl,ams,diffusProgId);
+			// pop matrix
+			ams.mvPopMatrix();
+					ams.mvTranslate(0,-2,-20);
+			ams.mvRotate(20,[1,0,0]);
+			//ams.mvTranslate(0,-15,-30);
+		
+		
+			// sphere
+			// ---------------------------------------
+			// push matrix
+			ams.mvPushMatrix();
+			ams.mvPopMatrix();
+
+				ams.mvTranslate(0.0,0.5,0);
+				// position & orientation
+				// draw
+				sphere1.draw(agl,ams,GodRayProgId);
+			// pop matrix
+							ams.mvTranslate(0.0,-2,-25);
+
+		// ---------------------------------------	
+		// pop matrix
+		ams.mvPopMatrix();
+	}
+	
+	// nextFrame
+	// -----------------------------
+    function nextFrame() {
+        requestAnimFrame(nextFrame);
+        sceneDraw();
+        animate();
+    }
+    
+    // animate
+    // ------------------------------
+    function animate(){
+    	// increase time
+    	sceneClock.tick() ;
+    	waveTime = waveTime + 0.005*sceneClock.get();
+    	GodRayProg.wTime = waveTime * speed ;
+    //	GodRayProg.wVolum =  intensity ;
+
+    	/*GodRayProg.wSunSize = 0.1 * size;
+		GodRayProg.wGodrayIntensity = 0.1 * intensity;
+		GodRayProg.wGodrayReach = 0.1 * reach;
+		GodRayProg.wOcclusionCoeff = 0.1 * occlusion;*/
+
+    }
+
+</script>
+
+</head>
+
+<body onload="">
+	
+
+	
+    <div class="container">
+      <div class="header clearfix">
+
+        <h3 class="text-muted">Demo God Ray</h3>
+      </div>
+
+      <div class="jumbotron">
+        <h1 class="display-3">Voici le deuxième shader Bonus !</h1>
+        <p><a class="btn btn-lg btn-success jumper" onclick="myFunction()" href="#canvasId" role="button">Voir la démonstration</a></p>
+         
+          <div class="col-lg-2" ><div>Vitesse</div> <input id="vitesse" onchange="updateVitesse(this.value)" type=range step=.5 /> <p id ="textVitesse"> 	</p></div>
+
+
+		<br/>
+		<br/>
+		<br/>
+		<br/>
+		<br/>
+      </div>
+
+      <div class="row marketing">
+        		
+
+        <div  id = "canvasId" class="col-lg-offset-2">
+       
+
+       </div>
+      </div>
+
+      
+
+			
+	<footer id = "footerId"class="footer">
+        <p>&copy; GOUDE Ific & HELALI Billel & LOISEAU Anne-Claire 2016	</p>
+      </footer>
+
+			</div>
+		</div>
+	</body>
+
+
+<script type="text/javascript">
+	 
+function updateVitesse(ish){
+    speed = ish/100.0;
+    document.getElementById("textVitesse").innerHTML ="Vitesse :" + speed;
+
+}
+
+
+	 function myFunction(){
+
+//alert(document.getElementById("canvas") );
+if(document.getElementById("oglcanvas") == null){
+
+
+document.getElementById("vitesse").value//string value
+    	    speed=0.0;
+
+
+
+
+
+var canvas = document.createElement('canvas');
+
+canvas.id = "oglcanvas";
+canvas.width = 800;
+canvas.height = 700;
+
+
+var element = document.getElementById("canvasId");
+element.appendChild(canvas);
+webGLStart();
+}
+
+
+	 };
+
+/*$(document).ready(function() {
+    $(".jumper").on("click", function( e ) {
+
+        e.preventDefault();
+
+        $("body, html").animate({ 
+            scrollTop: $( $(this).attr('href') ).offset().top 
+        }, 600);
+
+    });
+});*/
+</script>
+
+
+</html>
+
+

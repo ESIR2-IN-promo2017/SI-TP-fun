@@ -1,0 +1,564 @@
+<html>
+<head>
+	 <title>God Ray - ESIR 2 IN </title>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+	<script type="text/javascript" src="gltp1_fichiers/glMatrix-0.js"></script>
+	<script type="text/javascript" src="gltp1_fichiers/webgl-utils.js"></script>
+
+	<!-- ATOMICGL ENGINE -->
+	<!-- load "modules" -->
+	<script type="text/javascript" src="atomicGLContext.js"></script>
+	<script type="text/javascript" src="atomicGLMatrixStack.js"></script>
+	
+	<script type="text/javascript" src="atomicGLClock.js"></script>
+	<script type="text/javascript" src="atomicGLTexture.js"></script>
+
+	<script type="text/javascript" src="atomicGLShader.js"></script>
+	<script type="text/javascript" src="atomicGLGodRayShader.js"></script>
+	<script type="text/javascript" src="atomicGLGodRay.js"></script>
+	<script type="text/javascript" src="atomicGLShadowMapping.js"></script>
+
+	<script type="text/javascript" src="atomicGLCube.js"></script>
+	<script type="text/javascript" src="atomicGLxyPlane.js"></script>
+	<script type="text/javascript" src="atomicGLxzPlane.js"></script>
+	<script type="text/javascript" src="atomicGLSphere.js"></script>
+
+		<script type="text/javascript" src="atomicGLObj.js"></script>
+
+	<script type="text/javascript" src="objs/maison3.js"></script>
+	<script type="text/javascript" src="objs/maison3roof.js"></script>
+	<script type="text/javascript" src="objs/maison3wood.js"></script>
+	
+	<script type="text/javascript" src="objs/berge.js"></script>
+	<script type="text/javascript" src="objs/pont_dessus.js"></script>
+	<script type="text/javascript" src="objs/pont_pierre.js"></script>
+	<script type="text/javascript" src="objs/riviere.js"></script>
+	<script type="text/javascript" src="objs/sol.js"></script>
+	
+	<script type="text/javascript" src="objs/tour1base.js"></script>
+	<script type="text/javascript" src="objs/tour1mur.js"></script>
+	<script type="text/javascript" src="objs/tour1parape.js"></script>
+	<script type="text/javascript" src="objs/tour1sol.js"></script>
+	<script type="text/javascript" src="objs/tour1toit.js"></script>
+
+	<script type="text/javascript" src="objs/mur2base.js"></script>
+	<script type="text/javascript" src="objs/mur2pierre.js"></script>
+	<script type="text/javascript" src="objs/mur2bois.js"></script>
+	<script type="text/javascript" src="objs/mur2toit.js"></script>
+
+
+<!-- SHADER: texture per fragment -->
+	<!-- texture shader -->
+	<script id="vertex_texture" type="x-shader/x-vertex">
+	// vertex shader
+	// ------------------------------------------------------
+	// texture shader per fragment 
+	// light nb = 1
+	// ------------------------------------------------------
+
+	// attributes inputs  (vertex arrays)
+		attribute vec3 aVertexPosition;
+		attribute vec2 aVertexTexCoord;
+		attribute vec3 aVertexNormal;
+		attribute vec3 aVertexColor;
+
+	// uniform matrices
+		uniform mat4 uMVMatrix;
+		uniform mat4 uPMatrix;
+		uniform mat3 uNMatrix;
+
+	// output
+		varying vec2 vTextureCoord;
+		varying vec4 vPosition;
+		varying vec3 vNormal;
+		//varying vec4 tnormal;
+		//varying vec4 tcolor;
+
+
+    void main(void) {
+		//texture
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aVertexTexCoord;
+		
+		//lumière diffuse
+		
+		// model -> view 
+		vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+		gl_Position = uPMatrix * vPosition;
+		// vNormal
+		vNormal = uNMatrix * aVertexNormal;	
+		// tcolor
+		//tcolor = vec4(aVertexColor,1.0);
+    }
+	</script>
+
+	
+	<script id="frag_texture" type="x-shader/x-fragment">
+	#ifdef GL_ES
+		precision highp float;
+	#endif
+	// fragment shader
+	// ------------------------------------------------------
+	// texture shader per fragment 
+	// lights nb: 1
+	// ------------------------------------------------------
+
+	// varying input (output of the vertex shader)
+		varying vec4 vPosition;
+		varying vec3 vNormal;
+		varying vec4 tnormal;
+		varying vec3 tex_normal3;
+		//varying vec4 tcolor;
+		
+		varying vec2 vTextureCoord;
+		uniform sampler2D uSampler0;
+		uniform sampler2D uSampler1;
+		
+		// lights
+		// ambient
+		uniform vec3 uAmbientColor;
+
+		//point light ie omni dir:  location, color
+		uniform vec3 uPointLightPosition0;
+		uniform vec3 uPointLightColor0;
+
+	// local constant
+		// Kd: diffuse coeff
+		float Kd = 1. ;
+		
+
+    void main(void) {
+		
+		//lumière diffuse
+		
+		// light direction
+		vec3 lightDirection = normalize(uPointLightPosition0 - vPosition.xyz);
+		// eye direction
+		vec3 eyeDirection = normalize(-vPosition.xyz);
+
+		// normalize normal
+		vec3 normal = normalize(vNormal);
+		//  diffuse term
+		float diffuseLightWeight = max(dot(normal, lightDirection), 0.0)-1.0;
+			
+		// light color
+         vec3 lightColor =  Kd*diffuseLightWeight*uPointLightColor0/10.0*texture2D(uSampler0, vTextureCoord).xyz;
+
+		//texture
+		gl_FragColor = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t)) + vec4(lightColor,.0);
+		
+		//NormalMapping
+		vec4 tnormal = texture2D(uSampler1, vec2(vTextureCoord.s, vTextureCoord.t));
+		vec3 tex_normal3 = tnormal.xyz;
+		/*tex_normal3.x = (-0.5 + tex_normal3.x) * 2.0;
+		tex_normal3.y = (-0.5 + tex_normal3.y) * 2.0;
+		tex_normal3.z =  tex_normal3.z;
+		*/tex_normal3 = normalize(tex_normal3);
+    }
+	</script>
+	
+	
+	
+
+
+
+
+
+
+
+
+
+	<script id="vertex_Shadow" type="x-shader/x-vertex">
+		// vertex shader
+		
+// attributes inputs  (vertex arrays)
+		attribute vec3 aVertexPosition;
+
+
+		// uniform matrices
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
+			uniform mat3 uNMatrix;
+
+		// output (to fragment shader)
+			varying vec4 vPosition;
+
+		void main(void) {
+			// model -> view 
+			vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+			gl_Position = uPMatrix * vPosition;
+		}
+
+	</script>
+	<script id="frag_ShadowMap" type="x-shader/x-fragment">
+
+
+
+
+</script>
+
+<script id="frag_ShadowMap2" type="x-shader/x-fragment">
+
+#ifdef GL_ES
+precision highp float;
+#endif
+uniform float     uTime;
+
+
+void mainImage( out vec4 c,  in vec2 f );
+//////////////////////
+// Fire Flame shader
+
+// procedural noise from IQ
+vec2 hash( vec2 p )
+{
+	p = vec2( dot(p,vec2(127.1,311.7)),
+			 dot(p,vec2(269.5,183.3)) );
+	return -1.0 + 2.0*fract(sin(p)*43758.5453123);
+}
+
+float noise( in vec2 p )
+{
+	const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+	const float K2 = 0.211324865; // (3-sqrt(3))/6;
+	
+	vec2 i = floor( p + (p.x+p.y)*K1 );
+	
+	vec2 a = p - i + (i.x+i.y)*K2;
+	vec2 o = (a.x>a.y) ? vec2(1.0,0.0) : vec2(0.0,1.0);
+	vec2 b = a - o + K2;
+	vec2 c = a - 1.0 + 2.0*K2;
+	
+	vec3 h = max( 0.5-vec3(dot(a,a), dot(b,b), dot(c,c) ), 0.0 );
+	
+	vec3 n = h*h*h*h*vec3( dot(a,hash(i+0.0)), dot(b,hash(i+o)), dot(c,hash(i+1.0)));
+	
+	return dot( n, vec3(70.0) );
+}
+
+float fbm(vec2 uv)
+{
+	float f;
+	mat2 m = mat2( 1.6,  1.2, -1.2,  1.6 );
+	f  = 0.5000*noise( uv ); uv = m*uv;
+	f += 0.2500*noise( uv ); uv = m*uv;
+	f += 0.1250*noise( uv ); uv = m*uv;
+	f += 0.0625*noise( uv ); uv = m*uv;
+	f = 0.5 + 0.5*f;
+	return f;
+}
+
+//#define BLUE_FLAME
+//#define GREEN_FLAME
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+	vec2 uv = fragCoord.xy / 1080.;
+		vec2 q = uv;
+
+	q.x *= 5.;
+	q.y *= 2.;
+	float strength = floor(q.x+1.);
+	float T3 = max(3.,1.25*strength)*uTime;
+	q.x = mod(q.x,1.)-0.5;
+	q.y -= 0.25;
+	float n = fbm(strength*q - vec2(0,T3));
+	float c = 1. - 16. * pow( max( 0., length(q*vec2(1.8+q.y*1.5,.75) ) - n * max( 0., q.y+.25 ) ),1.2 );
+//	float c1 = n * c * (1.5-pow(1.25*uv.y,4.));
+	float c1 = n * c * (1.5-pow(2.50*uv.y,4.));
+	c1=clamp(c1,0.,1.);
+
+	vec3 col = vec3(1.5*c1, 1.5*c1*c1*c1, c1*c1*c1*c1*c1*c1);
+	
+#ifdef BLUE_FLAME
+	col = col.zyx;
+#endif
+#ifdef GREEN_FLAME
+	col = 0.85*col.yxz;
+#endif
+	
+	float a = c * (1.-pow(uv.y,3.));
+	fragColor = vec4( mix(vec3(0.),col,a), 1.0);
+}
+void main( void ){vec4 color = vec4(0.0,0.0,0.0,1.0);mainImage( color, gl_FragCoord.xy );color.w = 1.0;gl_FragColor = color;}
+
+</script>
+
+	<!-- SHADER: diffus per fragment -->
+	<!-- diffuse shader -->
+	<script id="vertex_diffuse" type="x-shader/x-vertex">
+	// vertex shader
+	// ------------------------------------------------------
+	// diffuse shader
+	// per fragment 
+	// lights nb: 1
+	// ------------------------------------------------------
+
+	// attributes inputs  (vertex arrays)
+		attribute vec3 aVertexPosition;
+		attribute vec3 aVertexNormal;
+		attribute vec3 aVertexColor;
+
+	// uniform matrices
+		uniform mat4 uMVMatrix;
+		uniform mat4 uPMatrix;
+		uniform mat3 uNMatrix;
+
+	// output (to fragment shader)
+		varying vec4 vPosition;
+		varying vec3 vNormal;
+		varying vec3 vcolor;
+
+	void main(void) {
+		// model -> view 
+		vPosition = uMVMatrix * vec4(aVertexPosition, 1.0);
+		gl_Position = uPMatrix * vPosition;
+		// vNormal
+		vNormal = uNMatrix * aVertexNormal;	
+		// vcolor
+		vcolor = aVertexColor;
+	}
+</script>
+<script id="frag_diffuse" type="x-shader/x-fragment">
+	#ifdef GL_ES
+		precision highp float;
+	#endif
+
+	// fragment shader
+	// ------------------------------------------------------
+	// diffuse shader
+	// per fragment 
+	// lights nb: 1
+	// ------------------------------------------------------
+
+	// varying input (output of the vertex shader)
+		varying vec4 vPosition;
+		varying vec3 vNormal;
+		varying vec3 vcolor;
+		
+	// lights
+
+		//point light ie omni dir:  location, color
+		uniform vec3 uPointLightPosition0;
+		uniform vec3 uPointLightColor0;
+
+
+	// local constant
+		// Kd: diffuse speed
+		float Kd = 1.0 ;
+	
+	// main
+    void main(void) {	
+		// light direction
+		vec3 lightDirection = normalize(uPointLightPosition0 - vPosition.xyz);
+
+		// eye direction
+		vec3 eyeDirection = normalize(-vPosition.xyz);
+
+		// normalize normal
+		vec3 normal = normalize(vNormal);
+		//  diffuse term
+		float diffuseLightWeight = max(dot(normal, lightDirection), 0.0);
+			
+		// light color
+         vec3 lightColor =  Kd*diffuseLightWeight*(uPointLightColor0)*vcolor  ;
+
+        gl_FragColor = vec4(lightColor,1.0);
+    }
+</script>
+
+		<!-- ATOMICGL ENGINE -->
+		<!-- create objects -->
+		<!-- wegGLStart function (required) -->
+		<script type="text/javascript">
+		//------------------------------------------------------------------------------
+
+		// OpenGL context
+		var agl = new atomicGLContext();
+		
+		// clock
+		var sceneClock =new atomicGLClock() ;
+
+		// matrix stack
+		var ams =new atomicGLMatrixStack();
+
+	var Yangle = 0.0 ;
+
+
+		var uTime;
+
+		var speed = 0.0;
+		var size = 0.0;
+		var intensity = 0.0;
+		var reach= 0.0;
+		var occlusion= 0.0;
+
+		var eau1 ;
+		var toit1 ;
+		var mur_pierre1 ;
+
+		// diffus
+		var diffusProg ;
+		var diffusProgId ;
+
+		var GodRayProg;
+		var GodRayProgId;
+		
+		var waveTime = 0.0 ;
+		var sphere 		= new atomicGLSphere("sphere",0.5,64,64);
+		var sphere1 		= new atomicGLSphere("sphere",50.0,128,128);
+		var water 		= new atomicGLxzPlane("water",15,50,200,2,15.0,10.0);
+			var cub = new atomicGLCube("cube", 20,20,5);
+		var pierre2;
+
+		// animation
+		var house3 		= new atomicGLObj('maison3', 		new maison3(),		1.0,1.0) ;
+		var house3roof 	= new atomicGLObj('maison3roof', 	new maison3roof(),	1.0,1.0) ;
+		var house3wood 	= new atomicGLObj('maison3wood', 	new maison3wood(),	1.0,1.0) ;
+		var bridge1stone= new atomicGLObj('bridge1stone', 	new pont_pierre(),	1.0,1.0) ;
+		var bridge1top 	= new atomicGLObj('bridge1top', 	new pont_dessus(),	0.1,0.1) ;
+		var ground0top 	= new atomicGLObj('ground0top', 	new sol(),			0.1,0.1) ;
+		var ground0edge = new atomicGLObj('ground0edge', 	new berge(),		1.0,1.0) ;
+
+		//webGLStart
+		function webGLStart() {
+		// init
+		// -----------------------------
+			// recover penGL canvas 
+			var canvas = document.getElementById("oglcanvas");
+
+			// init OpenGL context
+			agl.initGL(canvas,[0.0,0.0,0.0]);
+			
+			// light
+			agl.pushLight([1.0,-2.1,-20.0],[1.,1.0,1.0]); // position, color
+			mur_pierre1 =  	new atomicGLTexture("texture/mur_pierre1.png","color",agl);
+			toit1 		=  	new atomicGLTexture("texture/toit1.png","color",agl);
+			bois1 		=  	new atomicGLTexture("texture/bois1.png","color",agl);
+			pave2  		=  	new atomicGLTexture("texture/pave2.png","color",agl);
+			eau1 		=	new atomicGLTexture("texture/eau1.png","color",agl);
+			pierre2 	= 	new atomicGLTexture("texture/pierre2.png","color",agl);
+
+			// init Matrix Stack
+			ams.initMatrix(agl,45); // fov = 45 degrees
+
+			textProg 		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,2,1);
+			textProgId		= agl.pushProgram(textProg);
+			// load shaders
+			diffusProg 		= new atomicGLShader("diffus", agl,"frag_diffuse", "vertex_diffuse" ,false,1);
+			
+			GodRayProg = new atomicGLShadowMapping("fire", agl,"frag_ShadowMap2", "vertex_Shadow" ,false,1);
+
+			// push shader in context
+			diffusProgId 		= agl.pushProgram(diffusProg);
+		
+			GodRayProgId 	= agl.pushProgram(GodRayProg);
+			GodRayProgId.uTime=0.0;
+			// sphere
+			sphere.setFaceColor("All",[1.0,1.0,1.0]);
+			sphere.initGLBuffers(agl);
+			cub.initGLBuffers(agl)
+			water.pushTexture(eau1) ;
+			 							water.initGLBuffers(agl);
+
+
+
+
+		house3.pushTexture(mur_pierre1);			house3.initGLBuffers(agl);
+		house3roof.pushTexture(toit1); 				house3roof.initGLBuffers(agl);
+		house3wood.pushTexture(bois1); 				house3wood.initGLBuffers(agl);
+		
+		// bridge
+		bridge1stone.pushTexture(mur_pierre1); 		bridge1stone.initGLBuffers(agl);
+		bridge1top.pushTexture(pave2); 				bridge1top.initGLBuffers(agl);
+		
+		// ground
+		ground0top.pushTexture(pave2); 				ground0top.initGLBuffers(agl);
+		ground0edge.pushTexture(pierre2); 			ground0edge.initGLBuffers(agl);
+
+
+
+
+
+
+
+			// start the animation
+			nextFrame();
+		}
+			
+		// draw
+		// -----------------------------
+			function sceneDraw(){
+			agl.initDraw();
+
+			// global transform
+			// ------------------------------
+			// push matrix
+			ams.mvPushMatrix();
+			// position & orientation	
+		// sphere
+
+				// ---------------------------------------
+				// push matrix
+				ams.mvPushMatrix();
+
+					//ams.mvRotate(-45,[1,0,0]);
+					ams.mvTranslate(-0,-10,0);
+
+				//	ams.mvTranslate(0.0,2,10);
+					// position & orientation
+					// draw
+					cub.draw(agl,ams,diffusProgId);
+				// pop matrix
+				ams.mvPopMatrix();
+
+			//ams.mvRotate(20,[0,1,0]);
+				// ---------------------------------------
+				// push matrix
+				ams.mvPushMatrix();
+					// position & orientation
+					// draw
+					sphere.draw(agl,ams,GodRayProgId);
+				// pop matrix
+				ams.mvPopMatrix();
+			
+
+		
+			// ---------------------------------------	
+			// pop matrix
+			ams.mvPopMatrix();
+		}
+		
+		// nextFrame
+		// -----------------------------
+	    function nextFrame() {
+	        requestAnimFrame(nextFrame);
+	        sceneDraw();
+	        animate();
+	    }
+	    
+	    // animate
+	    // ------------------------------
+	    function animate(){
+	    	// increase time
+	    	sceneClock.tick() ;
+	    	Yangle =Yangle + 0.5;
+
+	    	waveTime = waveTime + 0.005*sceneClock.get();
+	    	GodRayProg.wTime = waveTime*0.1  ;
+	    }
+
+	</script>
+
+	</head>
+
+<body onload="webGLStart();">
+	<br>
+    <canvas id="oglcanvas" style="border: none;" width="1100" height="900"></canvas>
+	<br>
+</body>
+
+	</html>
+
+
