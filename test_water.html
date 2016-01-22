@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>atomicGL DEBUG </title>
+        <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+        <script type="text/javascript" src="gltp1_fichiers/glMatrix-0.js"></script>
+        <script type="text/javascript" src="gltp1_fichiers/webgl-utils.js"></script>
+
+        <!-- load "modules" -->
+        <script type="text/javascript" src="atomicGLContext.js"></script>
+        <script type="text/javascript" src="atomicGLMatrixStack.js"></script>
+        <script type="text/javascript" src="atomicGLSceneGraph.js"></script>
+        <script type="text/javascript" src="atomicGLTexture.js"></script>
+
+        <script type="text/javascript" src="atomicGLClock.js"></script>
+        <script type="text/javascript" src="atomicGLWalkCamera.js"></script>
+
+        <script type="text/javascript" src="atomicGLShader.js"></script>
+        <script type="text/javascript" src="atomicGLwaveShader.js"></script>
+
+        <script type="text/javascript" src="atomicGLObj.js"></script>
+        <script type="text/javascript" src="atomicGLCube.js"></script>
+        <script type="text/javascript" src="atomicGLSkyBox.js"></script>
+        <script type="text/javascript" src="atomicGLxyPlane.js"></script>
+        <script type="text/javascript" src="atomicGLxzPlane.js"></script>
+        <script type="text/javascript" src="atomicGLSphere.js"></script>
+        <script type="text/javascript" src="atomicGLCylinder.js"></script>
+
+        <!-- SHADER: texture Diffus & normal map -->
+        <!-- texture diffus and normal mapshader -->
+        <script id="vertex_water" type="x-shader/x-vertex">
+// vertex shader
+// ------------------------------------------------------
+// texture shader per fragment 
+// ------------------------------------------------------
+// lights nb: 1
+// ------------------------------------------------------
+
+// attributes inputs  (vertex arrays)
+attribute vec3 aVertexPosition;
+        attribute vec2 aVertexTexCoord;
+        attribute vec3 aVertexNormal;
+
+    // uniform matrices
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+        uniform mat3 uNMatrix;
+
+        //uniforms
+        uniform sampler2D uSampler0; //perlin1
+        uniform sampler2D uSampler1; //perlin1_normal
+
+        uniform sampler2D uSampler2; //perlin2
+        uniform sampler2D uSampler3; //perlin2_normal
+
+    // output
+        varying vec2 vTextureCoord0;
+        varying vec2 vTextureCoord1;
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+
+    void main(void) {
+        // vNormal
+        vNormal = uNMatrix * aVertexNormal;	
+
+        vTextureCoord0 = 0.4*aVertexPosition.xz;
+        vTextureCoord1 = 0.1*aVertexPosition.xz;
+
+        vec3 vexPosition = aVertexPosition;
+        vec4 heightmap0 = texture2D(uSampler0, vec2(vTextureCoord0.s, vTextureCoord0.t));
+        float height0 = (heightmap0.r + heightmap0.g + heightmap0.b)/3.0;
+        vexPosition.y += 0.8*height0;//5.0;
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(vexPosition, 1.0);
+    }
+        </script>
+        <script id="frag_water" type="x-shader/x-fragment">
+#ifdef GL_ES
+        precision highp float;
+    #endif
+    // fragment shader
+    // ------------------------------------------------------
+    // texture shader per fragment 
+    // ------------------------------------------------------
+    // lights nb: 1
+    // ------------------------------------------------------
+
+    // local constant
+        // Kd: diffuse coeff
+        float Kd = 1.0 ;	
+
+    // inputs
+        varying vec2 vTextureCoord0;
+        varying vec2 vTextureCoord1;
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+
+    // Uniform
+        uniform sampler2D uSampler0; //perlin1
+        uniform sampler2D uSampler1; //perlin1_normal
+
+        uniform sampler2D uSampler2; //perlin2
+        uniform sampler2D uSampler3; //perlin2_normal
+
+        // lights
+        // ambient
+        uniform vec3 uAmbientColor;
+
+        //point light ie omni dir:  location, color
+        uniform vec3 uPointLightPosition0;
+        uniform vec3 uPointLightColor0;
+
+
+    void main(void) {
+        // light direction
+        vec3 lightDirection = normalize(uPointLightPosition0 - vPosition.xyz);
+        // eye direction
+        vec3 eyeDirection = normalize(-vPosition.xyz);
+
+        // normalize normal
+        //vec3 oldNormal = normalize(vNormal);
+        // new normal in tangent space
+        //vec3 newNormalTS = normalize(2.0*texture2D(uSampler1, vTextureCoord).xyz -1.0) ;
+        //newNormalTS.z = newNormalTS.z*1000.0;
+        // newNormalTS = normalize(newNormalTS);
+        // TS to View
+        //  diffuse term
+
+        // texture color
+        vec4 normal0 = normalize(2.0*texture2D(uSampler1, vec2(vTextureCoord0.s, vTextureCoord0.t)) - 1.0);
+        vec4 normal1 = normalize(2.0*texture2D(uSampler3, vec2(vTextureCoord1.s, vTextureCoord1.t)) - 1.0);
+
+        vec4 normal = normal0 + normal1;
+
+        float diffuseLightWeight = max(dot(normal.xyz, lightDirection), 0.0);
+
+        // light color
+        vec3 lightColor = Kd*uAmbientColor + Kd*diffuseLightWeight*uPointLightColor0;
+
+        gl_FragColor = vec4(lightColor, 0.8);
+        //vec4 heightmap0 = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+        //float height0 = (heightmap0.r + heightmap0.g + heightmap0.b)/3.0;
+        //gl_FragColor = vec4(height0, height0, height0, 1.0);
+        //gl_FragColor = vec4(normal.rgb, 1.0);
+    }
+        </script>
+
+        <!-- ATOMICGL ENGINE -->
+        <!-- create objects -->
+        <!-- wegGLStart function (required) -->
+        <script type="text/javascript">
+// OpenGL context
+var agl = new atomicGLContext();	
+// clock
+var sceneClock =new atomicGLClock() ;
+// matrix stack
+var ams = new atomicGLMatrixStack();
+// sceneGraph
+var sg = new atomicGLSceneGraph("root","SG_root");
+
+var Yangle = 0.0;
+
+// textures
+var perlin1, perlin1_normal;
+var perlin2, perlin2_normal;
+
+// shaders
+var waterProg;
+var waterProgId;
+
+// objects
+var water = new atomicGLxzPlane('water',50.0, 50.0, 200,200);
+
+//webGLStart
+function webGLStart() {
+    // init
+    // -----------------------------
+    // recover penGL canvas 
+    var canvas = document.getElementById("oglcanvas");
+
+    // init OpenGL context
+    agl.initGL(canvas,[1.0,1.0,1.0]);
+
+    // light
+    agl.pushLight([5.0,5.0,-10.0],[1.0,1.0,1.0]); // position, color
+    agl.ambientLightColor = [0.01,0.01,0.2];
+
+    // init Matrix Stack
+    ams.initMatrix(agl,45); // fov = 45 degrees
+
+    // texture
+    perlin1				=  	new atomicGLTexture("texture/perlin_noise.png","color",agl);
+    perlin1_normal 		=  	new atomicGLTexture("texture/perlin_noise_normal.png","color",agl);
+    perlin2				=  	new atomicGLTexture("texture/perlin_noise_2.png","color",agl);
+    perlin2_normal 		=  	new atomicGLTexture("texture/perlin_noise_2_normal_2.png","color",agl);
+
+
+    // -------------------------------------------------
+    // load shaders and push shader in context
+    waterProg		= new atomicGLShader("waterShader", agl, "frag_water", "vertex_water", 4, 1);
+    waterProgId		= agl.pushProgram(waterProg);
+
+    water.pushTexture(perlin1);
+    water.pushTexture(perlin1_normal);
+    water.pushTexture(perlin2);
+    water.pushTexture(perlin2_normal);
+    water.initGLBuffers(agl);
+
+    // start the animation
+    nextFrame();
+}
+
+// draw
+// -----------------------------
+function sceneDraw(){
+    agl.initDraw();
+
+    // global transform
+    // ------------------------------
+    // push matrix
+    ams.mvPushMatrix();
+    // position & orientation	
+
+    ams.mvTranslate(0,-2,-20);
+    ams.mvRotate(20,[1,0,0]);
+    //ams.mvTranslate(0,-15,-30);
+
+    // floor
+    // ---------------------------------
+    // push matrix
+    ams.mvPushMatrix();
+    // position & orientation
+    ams.mvTranslate(0.0,0.0,0.0);
+    // draw
+    water.draw(agl,ams,waterProgId);
+    // pop matrix
+    ams.mvPopMatrix();
+
+    // ---------------------------------------	
+    // pop matrix
+    ams.mvPopMatrix();
+}
+
+// nextFrame
+// -----------------------------
+function nextFrame() {
+    requestAnimFrame(nextFrame);
+    sceneDraw();
+    animate();
+}
+
+// animate
+// ------------------------------
+function animate(){
+    // increase time
+    sceneClock.tick() ;
+    Yangle = Yangle + 0.01*sceneClock.get();
+}
+
+        </script>
+    </head>
+
+    <body onload="webGLStart();">
+        <br>
+        <canvas id="oglcanvas" style="border: none;" width="1600" height="900"></canvas>
+        <br>
+    </body></html>

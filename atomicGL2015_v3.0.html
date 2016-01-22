@@ -753,6 +753,122 @@
 		vTextureCoord = aVertexTexCoord;
 	}
 </script>
+<script id="vertex_water" type="x-shader/x-vertex">
+// vertex shader
+// ------------------------------------------------------
+// texture shader per fragment 
+// ------------------------------------------------------
+// lights nb: 1
+// ------------------------------------------------------
+
+// attributes inputs  (vertex arrays)
+attribute vec3 aVertexPosition;
+        attribute vec2 aVertexTexCoord;
+        attribute vec3 aVertexNormal;
+
+    // uniform matrices
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+        uniform mat3 uNMatrix;
+
+        //uniforms
+        uniform sampler2D uSampler0; //perlin1
+        uniform sampler2D uSampler1; //perlin1_normal
+
+        uniform sampler2D uSampler2; //perlin2
+        uniform sampler2D uSampler3; //perlin2_normal
+
+    // output
+        varying vec2 vTextureCoord0;
+        varying vec2 vTextureCoord1;
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+
+    void main(void) {
+        // vNormal
+        vNormal = uNMatrix * aVertexNormal;	
+
+        vTextureCoord0 = 0.4*aVertexPosition.xz;
+        vTextureCoord1 = 0.05*aVertexPosition.xz;
+
+        vec3 vexPosition = aVertexPosition;
+        vec4 heightmap = texture2D(uSampler0, vec2(vTextureCoord0.s, vTextureCoord0.t));
+        float height = (heightmap.r + heightmap.g + heightmap.b)/3.0;
+        vexPosition.y += 2.0*height;//5.0;
+
+        gl_Position = uPMatrix * uMVMatrix * vec4(vexPosition, 1.0);
+    }
+</script>
+<script id="frag_water" type="x-shader/x-fragment">
+#ifdef GL_ES
+        precision highp float;
+    #endif
+    // fragment shader
+    // ------------------------------------------------------
+    // texture shader per fragment 
+    // ------------------------------------------------------
+    // lights nb: 1
+    // ------------------------------------------------------
+
+    // local constant
+        // Kd: diffuse coeff
+        vec3 Kd = vec3(0.0, 0.5, 0.8);
+
+    // inputs
+        varying vec2 vTextureCoord0;
+        varying vec2 vTextureCoord1;
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+
+    // Uniform
+        uniform sampler2D uSampler0; //perlin1
+        uniform sampler2D uSampler1; //perlin1_normal
+
+        uniform sampler2D uSampler2; //perlin2
+        uniform sampler2D uSampler3; //perlin2_normal
+
+        // lights
+        // ambient
+        uniform vec3 uAmbientColor;
+
+        //point light ie omni dir:  location, color
+        uniform vec3 uPointLightPosition0;
+        uniform vec3 uPointLightColor0;
+
+
+    void main(void) {
+        // light direction
+        vec3 lightDirection = normalize(uPointLightPosition0 - vPosition.xyz);
+        // eye direction
+        vec3 eyeDirection = normalize(-vPosition.xyz);
+
+        // normalize normal
+        //vec3 oldNormal = normalize(vNormal);
+        // new normal in tangent space
+        //vec3 newNormalTS = normalize(2.0*texture2D(uSampler1, vTextureCoord).xyz -1.0) ;
+        //newNormalTS.z = newNormalTS.z*1000.0;
+        // newNormalTS = normalize(newNormalTS);
+        // TS to View
+        //  diffuse term
+
+        // texture color
+        vec4 normal0 = normalize(2.0*texture2D(uSampler1, vec2(vTextureCoord0.s, vTextureCoord0.t)) - 1.0);
+        vec4 normal1 = normalize(2.0*texture2D(uSampler3, vec2(vTextureCoord1.s, vTextureCoord1.t)) - 1.0);
+
+        vec4 normal = normal0 + normal1;
+
+        float diffuseLightWeight = max(dot(normal.xyz, lightDirection), 0.0);
+
+        // light color
+        vec3 lightColor = /*Kd*uAmbientColor +*/ Kd*diffuseLightWeight*uPointLightColor0;
+
+        gl_FragColor = vec4(lightColor, 0.8);
+        //vec4 heightmap0 = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+        //float height0 = (heightmap0.r + heightmap0.g + heightmap0.b)/3.0;
+        //gl_FragColor = vec4(height0, height0, height0, 1.0);
+        //gl_FragColor = vec4(normal.rgb, 1.0);
+    }
+</script>
 
 
 
@@ -810,6 +926,8 @@
 		var sable1 ;
 		var herbe1 ;
 		var skyTex ;
+        var perlin1, perlin1_normal;
+        var perlin2, perlin2_normal;
 
 	// scene
 	// -------------------------------------------------
@@ -862,6 +980,8 @@
 	var palais6		= new atomicGLObj('palais6', 		new palais_v01_toiture(),		1.0,1.0) ;
 
 	var arm2		= new atomicGLObj('arm2', 			new arm2(),		1.0,1.0) ;
+
+    var water = new atomicGLxzPlane('water', 200.0, 400.0, 200,200);
 
 	//webGLStart
 	function webGLStart() {
@@ -929,507 +1049,539 @@
 		toit2_normal 		= 	new atomicGLTexture("texture/toit2_normal.png","color",agl);
 
 		skyTex 				= 	new atomicGLTexture("texture/skybox_texture.png","color",agl);
-				
-		// -------------------------------------------------
-		// load shaders and push shader in context	
-		textProg 		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,1,0);
-		textProgId		= agl.pushProgram(textProg);
-
-		wtextProg 		= new atomicGLwaveShader("wave_texture", agl,"frag_texDiff", "vertex_wave" ,1,1);
-		wtextProgId		= agl.pushProgram(wtextProg);
-
-		texDiffProg 	= new atomicGLShader("diffuse-texture", agl,"frag_texDiff", "vertex_texDiff" ,1,1);
-		texDiffProgId	= agl.pushProgram(texDiffProg);
-
-		texDiffNormalMapProg 		= new atomicGLShader("diffuse-texture", agl,"frag_texDiffNormalMap", "vertex_texDiffNormalMap" ,2,1);
-		texDiffNormalMapProgId		= agl.pushProgram(texDiffNormalMapProg);
-		
-		// -------------------------------------------------
-		sky.pushTexture(skyTex);		
-		sky.initGLBuffers(agl);
-		// -------------------------------------------------
-		// environment
-		ground_grass.pushTexture(herbe1); 
-		ground_grass.initGLBuffers(agl); 
-		
-		ground_road.pushTexture(sol4); 					
-		ground_road.pushTexture(sol4_normal);
-		ground_road.initGLBuffers(agl);
- 		
-		ground_wall.pushTexture(mur_pierre1); 			
-		ground_wall.pushTexture(mur_pierre1_normal); 
-		ground_wall.initGLBuffers(agl); 
-		
-		ground_sand.pushTexture(sable1); 	
-		ground_sand.initGLBuffers(agl); 	
-
-		// house1
-		house1mur.pushTexture(mur3);
-		house1mur.pushTexture(mur3_normal);
-		house1mur.initGLBuffers(agl);
-	 
-		house1sol.pushTexture(sol3); 
-		house1sol.initGLBuffers(agl); 
-	 
-		house1stone.pushTexture(mur_pierre1);	
-		house1stone.pushTexture(mur_pierre1_normal);	
-		house1stone.initGLBuffers(agl);
-	 
-		house1stone2.pushTexture(mur2); 
-		house1stone2.pushTexture(mur2_normal); 
-		house1stone2.initGLBuffers(agl); 
-	 
-		house1toit.pushTexture(toit1); 	
-		house1toit.pushTexture(toit1_normal);	
-		house1toit.initGLBuffers(agl); 
-	 
-		maison1wood.pushTexture(bois1); 		
-		maison1wood.initGLBuffers(agl); 		
-		
-		// house 3: texture and init
-		house3mur.pushTexture(mur_pierre1);
-		house3mur.pushTexture(mur_pierre1_normal); 		
-		house3mur.initGLBuffers(agl);
-		
-		house3roof.pushTexture(toit1); 
-		house3roof.pushTexture(toit1_normal); 		
-		house3roof.initGLBuffers(agl);
-		
-		house3wood.pushTexture(bois1); 			
-		house3wood.initGLBuffers(agl);
-		
-		// bridge
-		bridge1stone.pushTexture(mur_pierre1);
-		bridge1stone.pushTexture(mur_pierre1_normal); 	
-		bridge1stone.initGLBuffers(agl);
-		
-		bridge1top.pushTexture(pave2); 			
-		bridge1top.pushTexture(pave2_normal); 			
-		bridge1top.initGLBuffers(agl);
-		
-		// tower
-		tower1base.pushTexture(pierre3);		
-		tower1base.pushTexture(pierre3_normal);		
-		tower1base.initGLBuffers(agl);
-		
-		tower1mur.pushTexture(mur_pierre1);
-		tower1mur.pushTexture(mur_pierre1_normal);		
-		tower1mur.initGLBuffers(agl);
-		
-		tower1parape.pushTexture(bois1);		
-		tower1parape.initGLBuffers(agl);
-		
-		tower1sol.pushTexture(sol3);			
-		tower1sol.initGLBuffers(agl);
-		
-		tower1toit.pushTexture(toit1);			
-		tower1toit.pushTexture(toit1_normal);			
-		tower1toit.initGLBuffers(agl);
-		
-		// wall
-		wall2base.pushTexture(pierre3) ;
-		wall2base.pushTexture(pierre3_normal) ;
-		wall2base.initGLBuffers(agl);
-		
-		wall2stone.pushTexture(mur_pierre1);
-		wall2stone.pushTexture(mur_pierre1_normal);	
-		wall2stone.initGLBuffers(agl);
-		
-		wall2wood.pushTexture(bois1);			
-		wall2wood.initGLBuffers(agl);
-		
-		wall2roof.pushTexture(toit1);
-		wall2roof.pushTexture(toit1_normal);
-		
-		wall2roof.initGLBuffers(agl);
-		
-		// donjon
-		donjon1Base.pushTexture(pierre3)		
-		donjon1Base.pushTexture(pierre3_normal)		
-		donjon1Base.initGLBuffers(agl);	
-		
-		donjon1Bois.pushTexture(bois1) 	
-		donjon1Bois.initGLBuffers(agl); 	
-
-		donjon1Fenetre.pushTexture(marbre1)
-		donjon1Fenetre.initGLBuffers(agl);
-
-		donjon1Mur.pushTexture(mur_pierre1)	 	
-		donjon1Mur.pushTexture(mur_pierre1_normal)	 	
-		donjon1Mur.initGLBuffers(agl);	 	
-
-		donjon1Sol.pushTexture(sol3)				
-		donjon1Sol.initGLBuffers(agl); 		
-
-		donjon1Toiture.pushTexture(toit1)
-		donjon1Toiture.pushTexture(toit1_normal)
-		donjon1Toiture.initGLBuffers(agl);
-		
-		// palais
-		palais1.pushTexture(bois2);	
-		palais1.initGLBuffers(agl);	
-		
-		palais2.pushTexture(bois1);	
-		palais2.initGLBuffers(agl);	
-		
-		palais3.pushTexture(sol5);	
-		palais3.initGLBuffers(agl);	
-		
-		palais4.pushTexture(mur_pierre1);
-		palais4.pushTexture(mur_pierre1_normal);	
-		palais4.initGLBuffers(agl);	
-		
-		palais5.pushTexture(sol4);
-		palais5.pushTexture(sol4_normal);	
-		palais5.initGLBuffers(agl);	
-		
-		palais6.pushTexture(toit2);	
-		palais6.pushTexture(toit2_normal);	
-		palais6.initGLBuffers(agl);	
-		
-		arm2.pushTexture(toit2);	
-		arm2.initGLBuffers(agl);
 
 
-		// scene graph
-		// --------------------------------------------------------------------------------
-		sg.setRootElt(cam,sky,textProgId);
-	//	sg.addChild(arm2);
+        perlin1				=  	new atomicGLTexture("texture/perlin_noise.png","color",agl);
+        perlin1_normal 		=  	new atomicGLTexture("texture/perlin_noise_normal.png","color",agl);
 
-		// ground -----------------------------------------------
-		var O3D_ground = new atomicGLSceneGraph('transform','ground');
-		O3D_ground.setTransform([0.0,0.0,0.0],[0,1,0],0);
-		sg.addChild(O3D_ground) ;
-		// road
-		var O3D_ground_road = new atomicGLSceneGraph('object3D','ground_road');
-		O3D_ground_road.setObject3D(ground_road,texDiffNormalMapProgId);
-		O3D_ground.addChild(O3D_ground_road);
-		// wall
-		var O3D_ground_wall = new atomicGLSceneGraph('object3D','ground_wall');
-		O3D_ground_wall.setObject3D(ground_wall,texDiffNormalMapProgId);
-		O3D_ground.addChild(O3D_ground_wall);
-		// sand
-		var O3D_ground_sand = new atomicGLSceneGraph('object3D','ground_sand');
-		O3D_ground_sand.setObject3D(ground_sand,texDiffProgId);
-		O3D_ground.addChild(O3D_ground_sand);
-		// grass
-		var O3D_ground_grass = new atomicGLSceneGraph('object3D','ground_grass');
-		O3D_ground_grass.setObject3D(ground_grass,texDiffProgId);
-		O3D_ground.addChild(O3D_ground_grass);	
-		
-		// donjon -----------------------------------------------------
-		var O3D_donjon1 =  new atomicGLSceneGraph('transform','donjon1');
-		O3D_donjon1.setTransform([-10.0,0.05,-40.0],[0,1,0],90.0);
-		sg.addChild(O3D_donjon1) ;
-		// base
-		var O3D_donjon_base = new atomicGLSceneGraph('object3D','donjon_base');
-		O3D_donjon_base.setObject3D(donjon1Base,texDiffNormalMapProgId);
-		O3D_donjon1.addChild(O3D_donjon_base);	
-		// wood
-		var O3D_donjon_wood = new atomicGLSceneGraph('object3D','donjon_bois');
-		O3D_donjon_wood.setObject3D(donjon1Bois,texDiffProgId);
-		O3D_donjon1.addChild(O3D_donjon_wood);	
-		// window
-		var O3D_donjon_window = new atomicGLSceneGraph('object3D','donjon_fenetre');
-		O3D_donjon_window.setObject3D(donjon1Fenetre,texDiffProgId);
-		O3D_donjon1.addChild(O3D_donjon_window);	
-		// wall
-		var O3D_donjon_wall = new atomicGLSceneGraph('object3D','donjon_mur');
-		O3D_donjon_wall.setObject3D(donjon1Mur,texDiffNormalMapProgId);
-		O3D_donjon1.addChild(O3D_donjon_wall);	
-		// ground
-		var O3D_donjon_ground = new atomicGLSceneGraph('object3D','donjon_sol');
-		O3D_donjon_ground.setObject3D(donjon1Sol,texDiffProgId);
-		O3D_donjon1.addChild(O3D_donjon_ground);	
-		// roof
-		var O3D_donjon_roof = new atomicGLSceneGraph('object3D','donjon_toiture');
-		O3D_donjon_roof.setObject3D(donjon1Toiture,texDiffNormalMapProgId);
-		O3D_donjon1.addChild(O3D_donjon_roof);
-		
-		// donjon 2 ------------------------------------------------------
-		var O3D_donjon2 =  new atomicGLSceneGraph('transform','donjon2');
-		O3D_donjon2.setTransform([10.0,0.05,22.0],[0,1,0],-180.0);
-		sg.addChild(O3D_donjon2) ;		
-		O3D_donjon2.addChild(O3D_donjon_base);	
-		O3D_donjon2.addChild(O3D_donjon_wood);
-		O3D_donjon2.addChild(O3D_donjon_window);	
-		O3D_donjon2.addChild(O3D_donjon_wall);	
-		O3D_donjon2.addChild(O3D_donjon_ground);	
-		O3D_donjon2.addChild(O3D_donjon_roof);	
-		// donjon 3 ------------------------------------------------------
-		var O3D_donjon3 =  new atomicGLSceneGraph('transform','donjon3');
-		O3D_donjon3.setTransform([45.0,0.05,-112.0],[0,1,0],-90.0);
-		sg.addChild(O3D_donjon3) ;		
-		O3D_donjon3.addChild(O3D_donjon_base);	
-		O3D_donjon3.addChild(O3D_donjon_wood);
-		O3D_donjon3.addChild(O3D_donjon_window);	
-		O3D_donjon3.addChild(O3D_donjon_wall);	
-		O3D_donjon3.addChild(O3D_donjon_ground);	
-		O3D_donjon3.addChild(O3D_donjon_roof);	
-		
-		// palais ----------------------------------------------------------
-		var O3D_palais =  new atomicGLSceneGraph('transform','palais');
-		O3D_palais.setTransform([-15.0,0.05,-70.0],[0,1,0],0.0);
-		sg.addChild(O3D_palais) ;
-		// palais part 1
-		var O3D_palais1 = new atomicGLSceneGraph('object3D','palais1');
-		O3D_palais1.setObject3D(palais1,texDiffProgId);
-		O3D_palais.addChild(O3D_palais1);	
-		// palais part 2
-		var O3D_palais2 = new atomicGLSceneGraph('object3D','palais2');
-		O3D_palais2.setObject3D(palais2,texDiffProgId);
-		O3D_palais.addChild(O3D_palais2);	
-		// palais part 3
-		var O3D_palais3 = new atomicGLSceneGraph('object3D','palais3');
-		O3D_palais3.setObject3D(palais3,texDiffProgId);
-		O3D_palais.addChild(O3D_palais3);	
-		// palais part 4
-		var O3D_palais4 = new atomicGLSceneGraph('object3D','palais4');
-		O3D_palais4.setObject3D(palais4,texDiffNormalMapProgId);
-		O3D_palais.addChild(O3D_palais4);	
-		// palais part 5
-		var O3D_palais5 = new atomicGLSceneGraph('object3D','palais5');
-		O3D_palais5.setObject3D(palais5,texDiffNormalMapProgId);
-		O3D_palais.addChild(O3D_palais5);	
-		// palais part 6
-		var O3D_palais6 = new atomicGLSceneGraph('object3D','palais6');
-		O3D_palais6.setObject3D(palais6,texDiffNormalMapProgId);
-		O3D_palais.addChild(O3D_palais6);	
-		
-		// house 1 -----------------------------------------------------
-		var O3D_house = new atomicGLSceneGraph('transform','house1');
-		O3D_house.setTransform([4.0,0.05,-80.0],[0,1,0],0.0);
-		sg.addChild(O3D_house) ;
-		// house1mur
-		var O3D_house1mur = new atomicGLSceneGraph('object3D','house1mur');
-		O3D_house1mur.setObject3D(house1mur,texDiffNormalMapProgId);
-		O3D_house.addChild(O3D_house1mur);	
-		// house1sol
-		var O3D_house1sol = new atomicGLSceneGraph('object3D','house1sol');
-		O3D_house1sol.setObject3D(house1sol,texDiffProgId);
-		O3D_house.addChild(O3D_house1sol);	
-		// house1stone
-		var O3D_house1stone = new atomicGLSceneGraph('object3D','house1stone');
-		O3D_house1stone.setObject3D(house1stone,texDiffNormalMapProgId);
-		O3D_house.addChild(O3D_house1stone);	
-		// house1stone2
-		var O3D_house1stone2 = new atomicGLSceneGraph('object3D','house1stone2');
-		O3D_house1stone2.setObject3D(house1stone2,texDiffNormalMapProgId);
-		O3D_house.addChild(O3D_house1stone2);	
-		// house1toit
-		var O3D_house1toit = new atomicGLSceneGraph('object3D','house1toit');
-		O3D_house1toit.setObject3D(house1toit,texDiffNormalMapProgId);
-		O3D_house.addChild(O3D_house1toit);	
-		// maison1wood
-		var O3D_maison1wood = new atomicGLSceneGraph('object3D','maison1wood');
-		O3D_maison1wood.setObject3D(maison1wood,texDiffProgId);
-		O3D_house.addChild(O3D_maison1wood);	
-		
-		// house3 -----------------------------------------------------------
-		var O3D_house3 = new atomicGLSceneGraph('transform','house3');
-		O3D_house3.setTransform([15.0,0.05,-75],[0,1,0],-90.0);
-		sg.addChild(O3D_house3) ;
-		// house3mur
-		var O3D_house3mur = new atomicGLSceneGraph('object3D','house3mur');
-		O3D_house3mur.setObject3D(house3mur,texDiffNormalMapProgId);
-		O3D_house3.addChild(O3D_house3mur);	
-		// house1roof
-		var O3D_house3roof = new atomicGLSceneGraph('object3D','house1roof');
-		O3D_house3roof.setObject3D(house3roof,texDiffNormalMapProgId);
-		O3D_house3.addChild(O3D_house3roof);	
-		// house3wood
-		var O3D_house3wood = new atomicGLSceneGraph('object3D','house3wood');
-		O3D_house3wood.setObject3D(house3wood,texDiffProgId);
-		O3D_house3.addChild(O3D_house3wood);	
+        perlin2				=  	new atomicGLTexture("texture/perlin_noise_2.png","color",agl);
+        perlin2_normal 		=  	new atomicGLTexture("texture/perlin_noise_2_normal_2.png","color",agl);
 
-		// bridge ---------------------------------------
-		var O3D_bridge = new atomicGLSceneGraph('transform','bridge');
-		O3D_bridge.setTransform([0.0,0.05,0.0],[0,1,0],0.0);
-		sg.addChild(O3D_bridge) ;
-		// bridge1stone
-		var O3D_bridge1stone = new atomicGLSceneGraph('object3D','bridge1stone');
-		O3D_bridge1stone.setObject3D(bridge1stone,texDiffNormalMapProgId);
-		O3D_bridge.addChild(O3D_bridge1stone);	
-		// bridge1top
-		var O3D_bridge1top = new atomicGLSceneGraph('object3D','bridge1top');
-		O3D_bridge1top.setObject3D(bridge1top,texDiffNormalMapProgId);
-		O3D_bridge.addChild(O3D_bridge1top);	
+        // -------------------------------------------------
+        // load shaders and push shader in context	
+        textProg 		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,1,0);
+        textProgId		= agl.pushProgram(textProg);
+        textProg2		= new atomicGLShader("texture", agl,"frag_fire", "vertex_texture" ,1,0);
+        textProgId2		= agl.pushProgram(textProg);
 
-		// tower ------------------------------------------------------------
-		var O3D_tower = new atomicGLSceneGraph('transform','tower');
-		O3D_tower.setTransform([-10.0,0,-110],[0,1,0],0.0);
-		sg.addChild(O3D_tower) ;
-		// tower1base
-		var O3D_tower1base = new atomicGLSceneGraph('object3D','tower1base');
-		O3D_tower1base.setObject3D(tower1base,texDiffNormalMapProgId);
-		O3D_tower.addChild(O3D_tower1base);	
-		// tower1mur
-		var O3D_tower1mur = new atomicGLSceneGraph('object3D','tower1mur');
-		O3D_tower1mur.setObject3D(tower1mur,texDiffNormalMapProgId);
-		O3D_tower.addChild(O3D_tower1mur);	
-		// tower1parape
-		var O3D_tower1parape = new atomicGLSceneGraph('object3D','tower1parape');
-		O3D_tower1parape.setObject3D(tower1parape,texDiffProgId);
-		O3D_tower.addChild(O3D_tower1parape);	
-		// tower1sol
-		var O3D_tower1sol = new atomicGLSceneGraph('object3D','tower1sol');
-		O3D_tower1sol.setObject3D(tower1sol,texDiffProgId);
-		O3D_tower.addChild(O3D_tower1sol);	
-		// house1roof
-		var O3D_tower1toit = new atomicGLSceneGraph('object3D','tower1toit');
-		O3D_tower1toit.setObject3D(tower1toit,texDiffNormalMapProgId);
-		O3D_tower.addChild(O3D_tower1toit);	
-		
-		// tower2 ------------------------------------------------------------
-		var O3D_tower2 = new atomicGLSceneGraph('transform','tower2');
-		O3D_tower2.setTransform([15.0,0,0],[0,1,0],0.0);
-		O3D_tower.addChild(O3D_tower2) ;
-		O3D_tower2.addChild(O3D_tower1base);	
-		O3D_tower2.addChild(O3D_tower1mur);	
-		O3D_tower2.addChild(O3D_tower1parape);	
-		O3D_tower2.addChild(O3D_tower1sol);	
-		O3D_tower2.addChild(O3D_tower1toit);
+        wtextProg 		= new atomicGLwaveShader("wave_texture", agl,"frag_texDiff", "vertex_wave" ,1,1);
+        wtextProgId		= agl.pushProgram(wtextProg);
 
-		// wall --------------------------------------------------------------
-		var O3D_wall = new atomicGLSceneGraph('transform','wall');
-		O3D_wall.setTransform([4.4,0,-1.0],[0,1,0],0.0);
-		O3D_tower2.addChild(O3D_wall) ;
-		// wall2base
-		var O3D_wall2base = new atomicGLSceneGraph('object3D','wall2base');
-		O3D_wall2base.setObject3D(wall2base,texDiffNormalMapProgId);
-		O3D_wall.addChild(O3D_wall2base);	
-		// wall2stone
-		var O3D_wall2stone = new atomicGLSceneGraph('object3D','wall2stone');
-		O3D_wall2stone.setObject3D(wall2stone,texDiffNormalMapProgId);
-		O3D_wall.addChild(O3D_wall2stone);	
-		// wall2wood
-		var O3D_wall2wood  = new atomicGLSceneGraph('object3D','wall2wood');
-		O3D_wall2wood.setObject3D(wall2wood,texDiffProgId);
-		O3D_wall.addChild(O3D_wall2wood);	
-		// wall2roof
-		var O3D_wall2roof = new atomicGLSceneGraph('object3D','wall2roof');
-		O3D_wall2roof.setObject3D(wall2roof,texDiffNormalMapProgId);
-		O3D_wall.addChild(O3D_wall2roof);
+        texDiffProg 	= new atomicGLShader("diffuse-texture", agl,"frag_texDiff", "vertex_texDiff" ,1,1);
+        texDiffProgId	= agl.pushProgram(texDiffProg);
 
-	
+        texDiffNormalMapProg 		= new atomicGLShader("diffuse-texture", agl,"frag_texDiffNormalMap", "vertex_texDiffNormalMap" ,2,1);
+        texDiffNormalMapProgId		= agl.pushProgram(texDiffNormalMapProg);
+
+        waterProg		= new atomicGLShader("waterShader", agl, "frag_water", "vertex_water", 4, 1);
+        waterProgId		= agl.pushProgram(waterProg);
+
 		
 		cam.initPlayer(arm2,textProgId,sg);
 
-
-		// wall 2 --------------------------------------------------------------		
-		var O3D_wall2 = new atomicGLSceneGraph('transform','wall2');
-		O3D_wall2.setTransform([19.5,2,-2.0],[0,1,0],0.0);
-		O3D_wall.addChild(O3D_wall2) ;	
-		O3D_wall2.addChild(O3D_wall2base);	
-		O3D_wall2.addChild(O3D_wall2stone);	
-		O3D_wall2.addChild(O3D_wall2wood);	
-		O3D_wall2.addChild(O3D_wall2roof);
+        // -------------------------------------------------
+        sky.pushTexture(skyTex);		
+        sky.initGLBuffers(agl);
+        // -------------------------------------------------
+        // environment
+        ground_grass.pushTexture(herbe1); 
+        ground_grass.initGLBuffers(agl); 
 
 
-		// start the animation
-		nextFrame();
-	}
-		
-	// draw
-	// -----------------------------
-	function sceneDraw(){
-		agl.initDraw();
-		sg.draw(agl,ams);
-			
-	}
-	
-	// nextFrame
-	// -----------------------------
-    function nextFrame() {
-		handleKeys();
-        requestAnimFrame(nextFrame);
-        sceneDraw();
-        if(!game.isPaused)
-        	animate();
+        ground_road.pushTexture(sol4); 					
+        ground_road.pushTexture(sol4_normal);
+        ground_road.initGLBuffers(agl);
+
+        ground_wall.pushTexture(mur_pierre1); 			
+        ground_wall.pushTexture(mur_pierre1_normal); 
+        ground_wall.initGLBuffers(agl); 
+
+        ground_sand.pushTexture(sable1); 	
+        ground_sand.initGLBuffers(agl); 	
+
+        // house1
+        house1mur.pushTexture(mur3);
+        house1mur.pushTexture(mur3_normal);
+        house1mur.initGLBuffers(agl);
+
+        house1sol.pushTexture(sol3); 
+        house1sol.initGLBuffers(agl); 
+
+        house1stone.pushTexture(mur_pierre1);	
+        house1stone.pushTexture(mur_pierre1_normal);	
+        house1stone.initGLBuffers(agl);
+
+        house1stone2.pushTexture(mur2); 
+        house1stone2.pushTexture(mur2_normal); 
+        house1stone2.initGLBuffers(agl); 
+
+        house1toit.pushTexture(toit1); 	
+        house1toit.pushTexture(toit1_normal);	
+        house1toit.initGLBuffers(agl); 
+
+        maison1wood.pushTexture(bois1); 		
+        maison1wood.initGLBuffers(agl); 		
+
+        // house 3: texture and init
+        house3mur.pushTexture(mur_pierre1);
+        house3mur.pushTexture(mur_pierre1_normal); 		
+        house3mur.initGLBuffers(agl);
+
+        house3roof.pushTexture(toit1); 
+        house3roof.pushTexture(toit1_normal); 		
+        house3roof.initGLBuffers(agl);
+
+        house3wood.pushTexture(bois1); 			
+        house3wood.initGLBuffers(agl);
+
+        // bridge
+        bridge1stone.pushTexture(mur_pierre1);
+        bridge1stone.pushTexture(mur_pierre1_normal); 	
+        bridge1stone.initGLBuffers(agl);
+
+        bridge1top.pushTexture(pave2); 			
+        bridge1top.pushTexture(pave2_normal); 			
+        bridge1top.initGLBuffers(agl);
+
+        // tower
+        tower1base.pushTexture(pierre3);		
+        tower1base.pushTexture(pierre3_normal);		
+        tower1base.initGLBuffers(agl);
+
+        tower1mur.pushTexture(mur_pierre1);
+        tower1mur.pushTexture(mur_pierre1_normal);		
+        tower1mur.initGLBuffers(agl);
+
+        tower1parape.pushTexture(bois1);		
+        tower1parape.initGLBuffers(agl);
+
+        tower1sol.pushTexture(sol3);			
+        tower1sol.initGLBuffers(agl);
+
+        tower1toit.pushTexture(toit1);			
+        tower1toit.pushTexture(toit1_normal);			
+        tower1toit.initGLBuffers(agl);
+
+        // wall
+        wall2base.pushTexture(pierre3) ;
+        wall2base.pushTexture(pierre3_normal) ;
+        wall2base.initGLBuffers(agl);
+
+        wall2stone.pushTexture(mur_pierre1);
+        wall2stone.pushTexture(mur_pierre1_normal);	
+        wall2stone.initGLBuffers(agl);
+
+        wall2wood.pushTexture(bois1);			
+        wall2wood.initGLBuffers(agl);
+
+        wall2roof.pushTexture(toit1);
+        wall2roof.pushTexture(toit1_normal);
+
+        wall2roof.initGLBuffers(agl);
+
+        // donjon
+        donjon1Base.pushTexture(pierre3)		
+            donjon1Base.pushTexture(pierre3_normal)		
+            donjon1Base.initGLBuffers(agl);	
+
+        donjon1Bois.pushTexture(bois1) 	
+            donjon1Bois.initGLBuffers(agl); 	
+
+        donjon1Fenetre.pushTexture(marbre1)
+            donjon1Fenetre.initGLBuffers(agl);
+
+        donjon1Mur.pushTexture(mur_pierre1)	 	
+            donjon1Mur.pushTexture(mur_pierre1_normal)	 	
+            donjon1Mur.initGLBuffers(agl);	 	
+
+        donjon1Sol.pushTexture(sol3)				
+            donjon1Sol.initGLBuffers(agl); 		
+
+        donjon1Toiture.pushTexture(toit1)
+            donjon1Toiture.pushTexture(toit1_normal)
+            donjon1Toiture.initGLBuffers(agl);
+
+        // palais
+        palais1.pushTexture(bois2);	
+        palais1.initGLBuffers(agl);	
+
+        palais2.pushTexture(bois1);	
+        palais2.initGLBuffers(agl);	
+
+        palais3.pushTexture(sol5);	
+        palais3.initGLBuffers(agl);	
+
+        palais4.pushTexture(mur_pierre1);
+        palais4.pushTexture(mur_pierre1_normal);	
+        palais4.initGLBuffers(agl);	
+
+        palais5.pushTexture(sol4);
+        palais5.pushTexture(sol4_normal);	
+        palais5.initGLBuffers(agl);	
+
+        palais6.pushTexture(toit2);	
+        palais6.pushTexture(toit2_normal);	
+        palais6.initGLBuffers(agl);	
+
+        arm2.pushTexture(toit2);	
+        arm2.initGLBuffers(agl);
+
+        // 	water
+        water.pushTexture(perlin1);
+        water.pushTexture(perlin1_normal);
+
+        water.pushTexture(perlin2);
+        water.pushTexture(perlin2_normal);
+
+        water.initGLBuffers(agl);
+
+
+        // scene graph
+        // --------------------------------------------------------------------------------
+        sg.setRootElt(cam,sky,textProgId);
+        //	sg.addChild(arm2);
+
+        // ground -----------------------------------------------
+        var O3D_ground = new atomicGLSceneGraph('transform','ground');
+        O3D_ground.setTransform([0.0,0.0,0.0],[0,1,0],0);
+        sg.addChild(O3D_ground) ;
+        // road
+        var O3D_ground_road = new atomicGLSceneGraph('object3D','ground_road');
+        O3D_ground_road.setObject3D(ground_road,texDiffNormalMapProgId);
+        O3D_ground.addChild(O3D_ground_road);
+        // wall
+        var O3D_ground_wall = new atomicGLSceneGraph('object3D','ground_wall');
+        O3D_ground_wall.setObject3D(ground_wall,texDiffNormalMapProgId);
+        O3D_ground.addChild(O3D_ground_wall);
+        // sand
+        var O3D_ground_sand = new atomicGLSceneGraph('object3D','ground_sand');
+        O3D_ground_sand.setObject3D(ground_sand,texDiffProgId);
+        O3D_ground.addChild(O3D_ground_sand);
+        // grass
+        var O3D_ground_grass = new atomicGLSceneGraph('object3D','ground_grass');
+        O3D_ground_grass.setObject3D(ground_grass,texDiffProgId);
+        O3D_ground.addChild(O3D_ground_grass);	
+        // water
+        var O3D_water_transform = new atomicGLSceneGraph('transform', 'water_transform');
+        O3D_water_transform.setTransform([0.0,-3.0,0.0], [0, 0, 0], 0);
+        O3D_ground.addChild(O3D_water_transform);
+        var O3D_water = new atomicGLSceneGraph('object3D', 'water');
+        O3D_water.setObject3D(water, waterProgId);
+        O3D_water_transform.addChild(O3D_water);
+
+        // donjon -----------------------------------------------------
+        var O3D_donjon1 =  new atomicGLSceneGraph('transform','donjon1');
+        O3D_donjon1.setTransform([-10.0,0.05,-40.0],[0,1,0],90.0);
+        sg.addChild(O3D_donjon1) ;
+        // base
+        var O3D_donjon_base = new atomicGLSceneGraph('object3D','donjon_base');
+        O3D_donjon_base.setObject3D(donjon1Base,texDiffNormalMapProgId);
+        O3D_donjon1.addChild(O3D_donjon_base);	
+        // wood
+        var O3D_donjon_wood = new atomicGLSceneGraph('object3D','donjon_bois');
+        O3D_donjon_wood.setObject3D(donjon1Bois,texDiffProgId);
+        O3D_donjon1.addChild(O3D_donjon_wood);	
+        // window
+        var O3D_donjon_window = new atomicGLSceneGraph('object3D','donjon_fenetre');
+        O3D_donjon_window.setObject3D(donjon1Fenetre,texDiffProgId);
+        O3D_donjon1.addChild(O3D_donjon_window);	
+        // wall
+        var O3D_donjon_wall = new atomicGLSceneGraph('object3D','donjon_mur');
+        O3D_donjon_wall.setObject3D(donjon1Mur,texDiffNormalMapProgId);
+        O3D_donjon1.addChild(O3D_donjon_wall);	
+        // ground
+        var O3D_donjon_ground = new atomicGLSceneGraph('object3D','donjon_sol');
+        O3D_donjon_ground.setObject3D(donjon1Sol,texDiffProgId);
+        O3D_donjon1.addChild(O3D_donjon_ground);	
+        // roof
+        var O3D_donjon_roof = new atomicGLSceneGraph('object3D','donjon_toiture');
+        O3D_donjon_roof.setObject3D(donjon1Toiture,texDiffNormalMapProgId);
+        O3D_donjon1.addChild(O3D_donjon_roof);
+
+        // donjon 2 ------------------------------------------------------
+        var O3D_donjon2 =  new atomicGLSceneGraph('transform','donjon2');
+        O3D_donjon2.setTransform([10.0,0.05,22.0],[0,1,0],-180.0);
+        sg.addChild(O3D_donjon2) ;		
+        O3D_donjon2.addChild(O3D_donjon_base);	
+        O3D_donjon2.addChild(O3D_donjon_wood);
+        O3D_donjon2.addChild(O3D_donjon_window);	
+        O3D_donjon2.addChild(O3D_donjon_wall);	
+        O3D_donjon2.addChild(O3D_donjon_ground);	
+        O3D_donjon2.addChild(O3D_donjon_roof);	
+        // donjon 3 ------------------------------------------------------
+        var O3D_donjon3 =  new atomicGLSceneGraph('transform','donjon3');
+        O3D_donjon3.setTransform([45.0,0.05,-112.0],[0,1,0],-90.0);
+        sg.addChild(O3D_donjon3) ;		
+        O3D_donjon3.addChild(O3D_donjon_base);	
+        O3D_donjon3.addChild(O3D_donjon_wood);
+        O3D_donjon3.addChild(O3D_donjon_window);	
+        O3D_donjon3.addChild(O3D_donjon_wall);	
+        O3D_donjon3.addChild(O3D_donjon_ground);	
+        O3D_donjon3.addChild(O3D_donjon_roof);	
+
+        // palais ----------------------------------------------------------
+        var O3D_palais =  new atomicGLSceneGraph('transform','palais');
+        O3D_palais.setTransform([-15.0,0.05,-70.0],[0,1,0],0.0);
+        sg.addChild(O3D_palais) ;
+        // palais part 1
+        var O3D_palais1 = new atomicGLSceneGraph('object3D','palais1');
+        O3D_palais1.setObject3D(palais1,texDiffProgId);
+        O3D_palais.addChild(O3D_palais1);	
+        // palais part 2
+        var O3D_palais2 = new atomicGLSceneGraph('object3D','palais2');
+        O3D_palais2.setObject3D(palais2,texDiffProgId);
+        O3D_palais.addChild(O3D_palais2);	
+        // palais part 3
+        var O3D_palais3 = new atomicGLSceneGraph('object3D','palais3');
+        O3D_palais3.setObject3D(palais3,texDiffProgId);
+        O3D_palais.addChild(O3D_palais3);	
+        // palais part 4
+        var O3D_palais4 = new atomicGLSceneGraph('object3D','palais4');
+        O3D_palais4.setObject3D(palais4,texDiffNormalMapProgId);
+        O3D_palais.addChild(O3D_palais4);	
+        // palais part 5
+        var O3D_palais5 = new atomicGLSceneGraph('object3D','palais5');
+        O3D_palais5.setObject3D(palais5,texDiffNormalMapProgId);
+        O3D_palais.addChild(O3D_palais5);	
+        // palais part 6
+        var O3D_palais6 = new atomicGLSceneGraph('object3D','palais6');
+        O3D_palais6.setObject3D(palais6,texDiffNormalMapProgId);
+        O3D_palais.addChild(O3D_palais6);	
+
+        // house 1 -----------------------------------------------------
+        var O3D_house = new atomicGLSceneGraph('transform','house1');
+        O3D_house.setTransform([4.0,0.05,-80.0],[0,1,0],0.0);
+        sg.addChild(O3D_house) ;
+        // house1mur
+        var O3D_house1mur = new atomicGLSceneGraph('object3D','house1mur');
+        O3D_house1mur.setObject3D(house1mur,texDiffNormalMapProgId);
+        O3D_house.addChild(O3D_house1mur);	
+        // house1sol
+        var O3D_house1sol = new atomicGLSceneGraph('object3D','house1sol');
+        O3D_house1sol.setObject3D(house1sol,texDiffProgId);
+        O3D_house.addChild(O3D_house1sol);	
+        // house1stone
+        var O3D_house1stone = new atomicGLSceneGraph('object3D','house1stone');
+        O3D_house1stone.setObject3D(house1stone,texDiffNormalMapProgId);
+        O3D_house.addChild(O3D_house1stone);	
+        // house1stone2
+        var O3D_house1stone2 = new atomicGLSceneGraph('object3D','house1stone2');
+        O3D_house1stone2.setObject3D(house1stone2,texDiffNormalMapProgId);
+        O3D_house.addChild(O3D_house1stone2);	
+        // house1toit
+        var O3D_house1toit = new atomicGLSceneGraph('object3D','house1toit');
+        O3D_house1toit.setObject3D(house1toit,texDiffNormalMapProgId);
+        O3D_house.addChild(O3D_house1toit);	
+        // maison1wood
+        var O3D_maison1wood = new atomicGLSceneGraph('object3D','maison1wood');
+        O3D_maison1wood.setObject3D(maison1wood,texDiffProgId);
+        O3D_house.addChild(O3D_maison1wood);	
+
+        // house3 -----------------------------------------------------------
+        var O3D_house3 = new atomicGLSceneGraph('transform','house3');
+        O3D_house3.setTransform([15.0,0.05,-75],[0,1,0],-90.0);
+        sg.addChild(O3D_house3) ;
+        // house3mur
+        var O3D_house3mur = new atomicGLSceneGraph('object3D','house3mur');
+        O3D_house3mur.setObject3D(house3mur,texDiffNormalMapProgId);
+        O3D_house3.addChild(O3D_house3mur);	
+        // house1roof
+        var O3D_house3roof = new atomicGLSceneGraph('object3D','house1roof');
+        O3D_house3roof.setObject3D(house3roof,texDiffNormalMapProgId);
+        O3D_house3.addChild(O3D_house3roof);	
+        // house3wood
+        var O3D_house3wood = new atomicGLSceneGraph('object3D','house3wood');
+        O3D_house3wood.setObject3D(house3wood,texDiffProgId);
+        O3D_house3.addChild(O3D_house3wood);	
+
+        // bridge ---------------------------------------
+        var O3D_bridge = new atomicGLSceneGraph('transform','bridge');
+        O3D_bridge.setTransform([0.0,0.05,0.0],[0,1,0],0.0);
+        sg.addChild(O3D_bridge) ;
+        // bridge1stone
+        var O3D_bridge1stone = new atomicGLSceneGraph('object3D','bridge1stone');
+        O3D_bridge1stone.setObject3D(bridge1stone,texDiffNormalMapProgId);
+        O3D_bridge.addChild(O3D_bridge1stone);	
+        // bridge1top
+        var O3D_bridge1top = new atomicGLSceneGraph('object3D','bridge1top');
+        O3D_bridge1top.setObject3D(bridge1top,texDiffNormalMapProgId);
+        O3D_bridge.addChild(O3D_bridge1top);	
+
+        // tower ------------------------------------------------------------
+        var O3D_tower = new atomicGLSceneGraph('transform','tower');
+        O3D_tower.setTransform([-10.0,0,-110],[0,1,0],0.0);
+        sg.addChild(O3D_tower) ;
+        // tower1base
+        var O3D_tower1base = new atomicGLSceneGraph('object3D','tower1base');
+        O3D_tower1base.setObject3D(tower1base,texDiffNormalMapProgId);
+        O3D_tower.addChild(O3D_tower1base);	
+        // tower1mur
+        var O3D_tower1mur = new atomicGLSceneGraph('object3D','tower1mur');
+        O3D_tower1mur.setObject3D(tower1mur,texDiffNormalMapProgId);
+        O3D_tower.addChild(O3D_tower1mur);	
+        // tower1parape
+        var O3D_tower1parape = new atomicGLSceneGraph('object3D','tower1parape');
+        O3D_tower1parape.setObject3D(tower1parape,texDiffProgId);
+        O3D_tower.addChild(O3D_tower1parape);	
+        // tower1sol
+        var O3D_tower1sol = new atomicGLSceneGraph('object3D','tower1sol');
+        O3D_tower1sol.setObject3D(tower1sol,texDiffProgId);
+        O3D_tower.addChild(O3D_tower1sol);	
+        // house1roof
+        var O3D_tower1toit = new atomicGLSceneGraph('object3D','tower1toit');
+        O3D_tower1toit.setObject3D(tower1toit,texDiffNormalMapProgId);
+        O3D_tower.addChild(O3D_tower1toit);	
+
+        // tower2 ------------------------------------------------------------
+        var O3D_tower2 = new atomicGLSceneGraph('transform','tower2');
+        O3D_tower2.setTransform([15.0,0,0],[0,1,0],0.0);
+        O3D_tower.addChild(O3D_tower2) ;
+        O3D_tower2.addChild(O3D_tower1base);	
+        O3D_tower2.addChild(O3D_tower1mur);	
+        O3D_tower2.addChild(O3D_tower1parape);	
+        O3D_tower2.addChild(O3D_tower1sol);	
+        O3D_tower2.addChild(O3D_tower1toit);
+
+        // wall --------------------------------------------------------------
+        var O3D_wall = new atomicGLSceneGraph('transform','wall');
+        O3D_wall.setTransform([4.4,0,-1.0],[0,1,0],0.0);
+        O3D_tower2.addChild(O3D_wall) ;
+        // wall2base
+        var O3D_wall2base = new atomicGLSceneGraph('object3D','wall2base');
+        O3D_wall2base.setObject3D(wall2base,texDiffNormalMapProgId);
+        O3D_wall.addChild(O3D_wall2base);	
+        // wall2stone
+        var O3D_wall2stone = new atomicGLSceneGraph('object3D','wall2stone');
+        O3D_wall2stone.setObject3D(wall2stone,texDiffNormalMapProgId);
+        O3D_wall.addChild(O3D_wall2stone);	
+        // wall2wood
+        var O3D_wall2wood  = new atomicGLSceneGraph('object3D','wall2wood');
+        O3D_wall2wood.setObject3D(wall2wood,texDiffProgId);
+        O3D_wall.addChild(O3D_wall2wood);	
+        // wall2roof
+        var O3D_wall2roof = new atomicGLSceneGraph('object3D','wall2roof');
+        O3D_wall2roof.setObject3D(wall2roof,texDiffNormalMapProgId);
+        O3D_wall.addChild(O3D_wall2roof);
+
+
+
+        cam.initPlayer(arm2,textProgId2,sg);
+
+
+        // wall 2 --------------------------------------------------------------		
+        var O3D_wall2 = new atomicGLSceneGraph('transform','wall2');
+        O3D_wall2.setTransform([19.5,2,-2.0],[0,1,0],0.0);
+        O3D_wall.addChild(O3D_wall2) ;	
+        O3D_wall2.addChild(O3D_wall2base);	
+        O3D_wall2.addChild(O3D_wall2stone);	
+        O3D_wall2.addChild(O3D_wall2wood);	
+        O3D_wall2.addChild(O3D_wall2roof);
+
+
+        // start the animation
+        nextFrame();
     }
-    
-    // animate
-    // ------------------------------
-    function animate(){
-    	// increase time
-    	sceneClock.tick() ;
-		time = time+ 0.001*sceneClock.get();
 
-    	wtextProg.wTime = time; 	
-    	cam.stateMachineAnimation();
-    
+// draw
+// -----------------------------
+function sceneDraw(){
+    agl.initDraw();
+    sg.draw(agl,ams);
+
+}
+
+// nextFrame
+// -----------------------------
+function nextFrame() {
+    handleKeys();
+    requestAnimFrame(nextFrame);
+    sceneDraw();
+    if(!game.isPaused)
+        animate();
+}
+
+// animate
+// ------------------------------
+function animate(){
+    // increase time
+    sceneClock.tick() ;
+    time = time+ 0.001*sceneClock.get();
+
+    wtextProg.wTime = time; 	
+    cam.stateMachineAnimation();
+
+}
+
+// keyboard
+// --------------------------------
+function handleKeyDown(event) 	{ currentlyPressedKeys[event.keyCode] = true;}
+function handleKeyUp(event) 	{currentlyPressedKeys[event.keyCode] = false;}
+
+function handleKeys(canvas) {
+    if (Math.abs(mouseX)>0.1){
+        cam.turnright(3.0*(mouseX*mouseX*mouseX));
+        lastMouseX=mouseX;
     }
-	
-	// keyboard
-	// --------------------------------
-	function handleKeyDown(event) 	{ currentlyPressedKeys[event.keyCode] = true;}
-	function handleKeyUp(event) 	{currentlyPressedKeys[event.keyCode] = false;}
+    cam.turnup(45*mouseY);
+    if (currentlyPressedKeys[67]) // (C) debug
+    {
+        // debug 
+        //console.log('atomicGL - Rémi COZOT - 2015');
+    }				
+    if (currentlyPressedKeys[68] || currentlyPressedKeys[39]) // (D or rightArrow) Right
+    {
+        // debug 
+        cam.right();		}
+    if (currentlyPressedKeys[81] || currentlyPressedKeys[37]) // (Q or leftArrow) Left 
+    {		
+        // debug 
+        cam.left();			//
+    }
+    if (currentlyPressedKeys[90] || currentlyPressedKeys[38]) // (Z or upArrow) Up
+    {
+        // debug 
+        cam.up();			//
+    }
+    if (currentlyPressedKeys[83] || currentlyPressedKeys[40]) // (S or downArrow) Down 
+    {
+        // debug 
+        cam.down();			//
+    }
+    if (currentlyPressedKeys[32]) // (SPACE BAR) Jump up
+    {
+        //debug	
+        if(cam.isIdle){
+            cam.isJumping =true;
+            cam.jump_up();
+        }
+    }
+    if (currentlyPressedKeys[27]) //(Echap) Add Menu 
+    {
+        //debug	
+        console.log("echap");
+        game.displayMenu();
 
-	function handleKeys(canvas) {
-		if (Math.abs(mouseX)>0.1){
-			cam.turnright(3.0*(mouseX*mouseX*mouseX));
-			lastMouseX=mouseX;
-		}
-		cam.turnup(45*mouseY);
-		if (currentlyPressedKeys[67]) // (C) debug
-		{
-			// debug 
-			//console.log('atomicGL - Rémi COZOT - 2015');
-		}				
-		if (currentlyPressedKeys[68] || currentlyPressedKeys[39]) // (D or rightArrow) Right
-		{
-			// debug 
-			cam.right();		}
-		if (currentlyPressedKeys[81] || currentlyPressedKeys[37]) // (Q or leftArrow) Left 
-		{		
-			// debug 
-			cam.left();			//
-		}
-		if (currentlyPressedKeys[90] || currentlyPressedKeys[38]) // (Z or upArrow) Up
-		{
-			// debug 
-			cam.up();			//
-		}
-		if (currentlyPressedKeys[83] || currentlyPressedKeys[40]) // (S or downArrow) Down 
-		{
-			// debug 
-			cam.down();			//
-		}
-		if (currentlyPressedKeys[32]) // (SPACE BAR) Jump up
-		{
-			//debug	
-			if(cam.isIdle){
-				cam.isJumping =true;
-				cam.jump_up();
-			}
-		}
-		if (currentlyPressedKeys[27]) //(Echap) Add Menu 
-		{
-			//debug	
-			console.log("echap");
-			game.displayMenu();
-			
-		}
-	}
-	
-	// mouse
-	// ------------------------------
-	function onDocumentMouseMove( event ) {
-		omouseX = mouseX ;
-		lastMouseX=mouseX;
-		lastMouseY=mouseY;
-		mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
-		mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
-		//console.log("lastMouseX : " +  lastMouseX + " Mouse X : " + mouseX);
-	}
+    }
+}
+
+// mouse
+// ------------------------------
+function onDocumentMouseMove( event ) {
+    omouseX = mouseX ;
+    lastMouseX=mouseX;
+    lastMouseY=mouseY;
+    mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
+    mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
+    //console.log("lastMouseX : " +  lastMouseX + " Mouse X : " + mouseX);
+}
 
 
 
-</script>
+    </script>
 </head>
 
 <body onload="webGLStart();">
-	<br>
+    <br>
     <canvas id="oglcanvas" style="border: none;" width="1920" height="1080"></canvas>
-	<br>
+    <br>
 </body></html>
