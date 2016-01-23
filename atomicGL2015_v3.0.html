@@ -130,6 +130,45 @@
 
 </script>
 
+<script id="frag_electric" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision highp float;
+#endif
+vec3      iResolution = vec3(800.);
+uniform float     uTime;
+uniform sampler2D uSampler0; 
+
+
+void mainImage( out vec4 c,  in vec2 f );
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+	vec2 o = vec2(iResolution.x/2.0, iResolution.y*0.9);
+	vec2 d = vec2(0.0, -1.0);
+	vec2 uv = fragCoord.xy;
+	vec3 col = vec3(0.0);
+	for (int i=0; i<100; i++) {
+		vec4 tex = texture2D(uSampler0, vec2(float(i)/256.0, uTime), -100.0);
+		vec2 tgt = vec2(iResolution.x/2.0, iResolution.y*0.1)-o;
+		vec2 seek = normalize(tgt)*(16.0/(length(tgt)+1.0));
+		d = normalize(seek+vec2(1.5, -1.0)*(vec2(-0.5, 0.0)+tex.gb));
+		float len = min(length(tgt), 9.0 * (tex.r+0.1));
+		float dist = abs(dot(o-uv, d.yx*vec2(1.0,-1.0)));
+		o += d*len;
+		if (dist < 1.5 && length(o-uv) < len*0.75) {
+			col = vec3(1.0);
+			break;
+		}
+	}
+	fragColor = vec4(col, 0.0);
+}
+void main( void ){
+	vec4 color = vec4(0.0,0.0,0.0,1.0);
+	mainImage( color, gl_FragCoord.xy );
+	color.w = 1.0;
+	gl_FragColor = color;
+}
+</script>
+
 	<!-- SHADER: diffus per fragment -->
 	<!-- diffuse shader -->
 	<script id="vertex_diffuse" type="x-shader/x-vertex">
@@ -933,7 +972,8 @@ attribute vec3 aVertexPosition;
 	// -------------------------------------------------
 	var sky = new atomicGLSkyBox('sky',800.0);
 	
-
+	//Click Event
+    document.onclick = myClickHandler;
 
 	var ground_grass = new atomicGLObj('solherbe', 		new sol_herbe(),		0.1,0.1) ;
 	var ground_road  = new atomicGLObj('solroute', 		new sol_route(),		0.5,0.5) ;
@@ -1061,7 +1101,7 @@ attribute vec3 aVertexPosition;
         // load shaders and push shader in context	
         textProg 		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,1,0);
         textProgId		= agl.pushProgram(textProg);
-        textProg2		= new atomicGLShader("texture", agl,"frag_fire", "vertex_texture" ,1,0);
+        textProg2		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,1,0);
         textProgId2		= agl.pushProgram(textProg);
 
         wtextProg 		= new atomicGLwaveShader("wave_texture", agl,"frag_texDiff", "vertex_wave" ,1,1);
@@ -1076,8 +1116,6 @@ attribute vec3 aVertexPosition;
         waterProg		= new atomicGLShader("waterShader", agl, "frag_water", "vertex_water", 4, 1);
         waterProgId		= agl.pushProgram(waterProg);
 
-		
-		cam.initPlayer(arm2,textProgId,sg);
 
         // -------------------------------------------------
         sky.pushTexture(skyTex);		
@@ -1239,7 +1277,7 @@ attribute vec3 aVertexPosition;
         // scene graph
         // --------------------------------------------------------------------------------
         sg.setRootElt(cam,sky,textProgId);
-        //	sg.addChild(arm2);
+     
 
         // ground -----------------------------------------------
         var O3D_ground = new atomicGLSceneGraph('transform','ground');
@@ -1465,7 +1503,7 @@ attribute vec3 aVertexPosition;
 
 
 
-        cam.initPlayer(arm2,textProgId2,sg);
+      	cam.initPlayer(arm2,textProgId2,sg);
 
 
         // wall 2 --------------------------------------------------------------		
@@ -1574,8 +1612,11 @@ function onDocumentMouseMove( event ) {
     mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
     //console.log("lastMouseX : " +  lastMouseX + " Mouse X : " + mouseX);
 }
+ 
+    function myClickHandler() {
+    	cam.isAttacking = true;
 
-
+    }
 
     </script>
 </head>
