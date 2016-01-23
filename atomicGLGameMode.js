@@ -27,6 +27,9 @@ atomicGLGameMode = function(agl){
 	this.displayMenu = function (){
        this.isPaused=true;
 	   alert("Continuer");
+
+	   //après click sur Ok
+	   this.isPaused=false;
 	}
 
 
