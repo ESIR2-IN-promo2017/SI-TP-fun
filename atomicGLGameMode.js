@@ -57,21 +57,21 @@ atomicGLGameMode = function(agl){
 			var com = document.getElementById('commandes');
 			var commandesDiv = document.createElement('div');
 			commandesDiv.setAttribute("id", "commandesDiv");
-	  		commandesDiv.innerHTML = '<div class="container"><h2> <p>Voici les Commandes associées au jeu</p></h2><table class="table table-bordered"> <thead><tr><th>Touches</th><th>Action associée</th></tr></thead><tbody>'
+	  		commandesDiv.innerHTML = '<div class="container"><h2> <p>Voici les commandes associées au jeu</p></h2><table class="table table-bordered"> <thead><tr><th>Touches</th><th>Action associée</th></tr></thead><tbody>'
 	  		+'<tr><td>Espace | Entrée</td>'
 	  		+'<td>Saut</td></tr>'
-	  		+'<tr><td>Fleche Haut | Z</td>'
+	  		+'<tr><td>Fleche haut | Z</td>'
 	  		+'<td>Avancer</td></tr>'
-	  		+'<tr><td>Fleche Bas | S</td>'
+	  		+'<tr><td>Fleche bas | S</td>'
 	  		+'<td>Reculer</td></tr>'
-			+'<tr><td>Fleche Droite | D</td>'
-	  		+'<td>Pas Vers La Droite</td></tr>'
-			+'<tr><td>Fleche Gauche| Q</td>'
-	  		+'<td>Pas Vers La Gauche</td></tr>'
-			+'<tr><td>Clique Souris Gauche</td>'
-	  		+'<td>Attaque Epée</td></tr>'
-			+'<tr><td>Echape</td>'
-	  		+'<td>Mettre Le Jeu En Pause</td></tr>'
+			+'<tr><td>Fleche droite | D</td>'
+	  		+'<td>Pas vers la droite</td></tr>'
+			+'<tr><td>Fleche gauche| Q</td>'
+	  		+'<td>Pas vers la gauche</td></tr>'
+			+'<tr><td>Clique souris gauche</td>'
+	  		+'<td>Attaque épée</td></tr>'
+			+'<tr><td>Echap</td>'
+	  		+'<td>Mettre le jeu en pause</td></tr>'
 	  		+'</tbody></table></div>'
 	  		com.appendChild(commandesDiv);	
 		}else{
