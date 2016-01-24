@@ -134,39 +134,19 @@ atomicGLCollision = function(){
 		this.lines.push(l18);
 
 		// Plans inclines
-		p1 = {};
-		p2 = {};
-		p3 = {};
-		p4 = {};
-		projete = {p1:p1, p2:p2};
-		incline = {p1:p3, p2:p4};
-		pl1 = {projete:projete, incline:incline};
+		p1 = {x:12,   y:2, z:-68};
+		p2 = {x:14.6, y:2, z:-68};
+		p3 = {x:14.6, y:2, z:-72};
+		p4 = {x:12,   y:2, z:-72};
+		p5 = {x:14.6, y:4.2, z:-72};
+		p6 = {x:12,   y:4.2, z:-72};
+		pl1 = {p1:p1, p2:p2, p3:p3, p4:p4, p5:p5, p6:p6};
 
 		this.plans.push(pl1);
 
 	}
 
 	this.check_collision = function(oldX, oldZ, newX, newZ){
-		var collision = false;
-
-		// Rectangles
-		/*for (i = 0; i < this.rectangles.length; i++) { 
-			rec = this.rectangles[i];
-
-			A = -(rec.p2.z - rec.p1.z);
-			B = rec.p2.x - rec.p1.x;
-			C = -(A * rec.p1.x + B * rec.p1.z);
-
-			D = A * newX + B * newZ + C;
-
-			if( D<0) {
-				//console.log("right");
-			}
-			else {
-				//console.log("left");
-			}
-		}*/
-
 		// Lines
 		for (i = 0; i < this.lines.length; i++) { 
 			line = this.lines[i];
@@ -177,9 +157,29 @@ atomicGLCollision = function(){
 				return true;
 			}
 		}
+		return false;
+	}
 
-
-		return collision;
+	this.monter = function(newX, newY, newZ) {
+		// Plans inclines
+		for (i = 0; i < this.plans.length; i++) { 
+			plan = this.plans[i];
+			// Si le new point est dans la zone sur le sol
+			box = this.getBoundingBox({p1:plan.p1, p2:plan.p3});
+			pointIn = newX >= box.p1.x 
+					&&newX <= box.p2.x
+					&&newZ >= box.p1.z
+					&&newZ <= box.p2.z;
+			// On calcule le nouveau y
+			if( pointIn) {
+				c = plan.p5.y - 2;
+				a = newZ - plan.p1.z;
+				B = plan.p4.z - plan.p1.z;
+				newY = c*(a/B) + 2;
+				break;
+			}
+		}
+		return newY;
 	}
 
 	

@@ -100,6 +100,7 @@ atomicGLWalkCamera = function(){
 
 	this.move = function(dx, dz) {
 		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
+		this.yc = this.collision.monter(this.xc+dx, this.yc, this.zc+dz);
 
 		if( col==false) {
 			this.xc += dx;
