@@ -112,33 +112,27 @@ atomicGLWalkCamera = function(){
 	}
 
 	this.jump_up = function () {
-			this.yc += this.step;
-			this.isIdle= false;
-			this.isJumpingDown=false;
-			this.isJumpingUp=true;
-			this.ya+=this.step;
-			this.update();
+		this.yc += this.step;
+		this.isIdle= false;
+		this.isJumpingDown=false;
+		this.isJumpingUp=true;
+		this.ya+=this.step;
+		this.update();
 	}
 
 	this.jump_down = function () {
-			this.yc -= this.step;
-			this.isIdle= false;
-			this.isJumpingDown=true;
-			this.isJumpingUp=false;
-			this.ya-=this.step;
-			this.update();
-
+		this.yc -= this.step;
+		this.isIdle= false;
+		this.isJumpingDown=true;
+		this.isJumpingUp=false;
+		this.ya-=this.step;
+		this.update();
 	}
 
 	this.turnright 	= function (a) {
-		limit = 0.02;
-		if( a >= limit || a <= -limit) {
-			this.rotateArm(-a,-1);
-		}
-	}
-
-	this.turnleft 	= function (a) {		
-		this.rotateArm(a,1);
+		this.theta  = a*90;
+		this.atheta = 270-a*90;
+		this.update();
 	}
 
 	this.turnup = function(a){
@@ -199,11 +193,6 @@ atomicGLWalkCamera = function(){
 		sg.addChild(this.O3D_armTransform);
 	}
 
-	this.rotateArm=function(a,signe) {		
-		this.atheta += -a*signe ;
-		this.theta += +a*signe ;
-		this.update();
-	}
 
 	this.update = function() {
 		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],
