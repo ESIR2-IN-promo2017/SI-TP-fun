@@ -18,7 +18,10 @@ atomicGLCollision = function(){
 	// -------------------------------------------------
 	
 	this.rectangles = [];
+	// Ligne de bordures
 	this.lines = [];
+	// Plans inclinés
+	this.plans = [];
 
 	this.EPSILON = 0.1;
 	
@@ -102,6 +105,45 @@ atomicGLCollision = function(){
 		this.lines.push(l11);
 		this.lines.push(l12);
 		this.lines.push(l13);
+
+		// Cabane sur la droite
+		var p1 = {x:14.6, y:2, z:-64.5};
+		var p2 = {x:14.6, y:2, z:-69};
+		var l14 = {p1:p1, p2:p2};
+
+		var p1 = {x:13, y:2, z:-68};
+		var p2 = {x:13, y:2, z:-75.5};
+		var l15 = {p1:p1, p2:p2};
+
+		var p1 = {x:13, y:2, z:-75.5};
+		var p2 = {x:19.5, y:2, z:-75.5};
+		var l16 = {p1:p1, p2:p2};
+
+		var p1 = {x:19.5, y:2, z:-75.5};
+		var p2 = {x:19.5, y:2, z:-64.5};
+		var l17 = {p1:p1, p2:p2};
+
+		var p1 = {x:19.5, y:2, z:-64.5};
+		var p2 = {x:14.6, y:2, z:-64.5};
+		var l18 = {p1:p1, p2:p2};
+
+		this.lines.push(l14);
+		this.lines.push(l15);
+		this.lines.push(l16);
+		this.lines.push(l17);
+		this.lines.push(l18);
+
+		// Plans inclines
+		p1 = {};
+		p2 = {};
+		p3 = {};
+		p4 = {};
+		projete = {p1:p1, p2:p2};
+		incline = {p1:p3, p2:p4};
+		pl1 = {projete:projete, incline:incline};
+
+		this.plans.push(pl1);
+
 	}
 
 	this.check_collision = function(oldX, oldZ, newX, newZ){

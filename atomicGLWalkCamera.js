@@ -129,8 +129,9 @@ atomicGLWalkCamera = function(){
 	}
 
 	this.turnright 	= function (a) {
-		this.theta  = a*90;
-		this.atheta = 270-a*90;
+		facteur = 67.5;
+		this.theta  = a*facteur;
+		this.atheta = 270-a*facteur;
 		this.update();
 	}
 
