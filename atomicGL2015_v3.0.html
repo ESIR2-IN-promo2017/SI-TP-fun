@@ -70,6 +70,7 @@
 
 	<script type="text/javascript" src="atomicGLShader.js"></script>
 	<script type="text/javascript" src="atomicGLwaveShader.js"></script>
+	<script type="text/javascript" src="atomicGLCollision.js"></script>
 
 	<script type="text/javascript" src="atomicGLObj.js"></script>
 	<script type="text/javascript" src="atomicGLCube.js"></script>
@@ -1585,7 +1586,7 @@ function handleKeys(canvas) {
         // debug 
         cam.down();			//
     }
-    if (currentlyPressedKeys[32]) // (SPACE BAR) Jump up
+    if (currentlyPressedKeys[32] || currentlyPressedKeys[13]) // (SPACE BAR) Jump up
     {
         //debug	
         if(cam.isIdle){
@@ -1623,6 +1624,6 @@ function onDocumentMouseMove( event ) {
 
 <body onload="webGLStart();">
     <br>
-    <canvas id="oglcanvas" style="border: none;" width="1920" height="1080"></canvas>
+    <canvas id="oglcanvas" style="border: none;" width="1280" height="720"></canvas>
     <br>
 </body></html>

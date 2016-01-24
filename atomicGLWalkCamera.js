@@ -36,7 +36,7 @@ atomicGLWalkCamera = function(){
 	this.aphi =[-.2,1,0];
 
 	// step
-	this.step = 0.10 ;
+	this.step = 0.10;
 	// rot
 	this.rot = 0.5 ;
 
@@ -45,6 +45,11 @@ atomicGLWalkCamera = function(){
 	this.timeOutAttacking =0.0;	
 	//Hauteur du saut
 	var height = 2;
+
+
+	// Collisions
+	this.collision = new atomicGLCollision();
+	//this.collision.load();
 
 
 
@@ -67,35 +72,70 @@ atomicGLWalkCamera = function(){
 	// up/right/left/down
 	//---------------------------
 	this.up 	= function () {
-		this.xc +=	+this.step*Math.sin(this.theta*3.14/180.0);
-		this.zc += 	-this.step*Math.cos(this.theta*3.14/180.0);
-		this.xa +=	+this.step*Math.sin(this.theta*3.14/180.0);
-		this.za += 	-this.step*Math.cos(this.theta*3.14/180.0);
+		dx =  this.step*Math.sin(this.theta*3.14/180.0);
+		dz = -this.step*Math.cos(this.theta*3.14/180.0);
+
+		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
+
+		if( col == false) {
+			this.xc += dx;
+			this.zc += dz;
+			this.xa += dx;
+			this.za += dz;
+		}
+
+		console.log("x : " + this.xc + " z : " + this.zc);
+		console.log("");
 		this.update();
 	}
 
 	this.down 	= function () {
-		this.xc +=	-this.step*Math.sin(this.theta*3.14/180.0);
-		this.zc +=	+this.step*Math.cos(this.theta*3.14/180.0);
-		this.xa +=	-this.step*Math.sin(this.theta*3.14/180.0);
-		this.za += 	+this.step*Math.cos(this.theta*3.14/180.0);
-		this.update();;
+		dx = -this.step*Math.sin(this.theta*3.14/180.0);
+		dz =  this.step*Math.cos(this.theta*3.14/180.0);
+
+		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
+
+		if( col==false){
+			this.xc += dx;
+			this.zc += dz;
+			this.xa += dx;
+			this.za += dz;
+			this.update();
+		}
+
+		console.log("x : " + this.xc + " z : " + this.zc);
 	}
 
 	this.right 	= function () {
-		this.xc +=	+this.step*Math.cos(this.theta*3.14/180.0);
-		this.zc += 	+this.step*Math.sin(this.theta*3.14/180.0);
-		this.xa +=	+this.step*Math.cos(this.theta*3.14/180.0);
-		this.za += 	+this.step*Math.sin(this.theta*3.14/180.0);
-		this.update();
+		dx = this.step*Math.cos(this.theta*3.14/180.0);
+		dz = this.step*Math.sin(this.theta*3.14/180.0);
+
+		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
+
+		if( col==false ) {
+			this.xc += dx;
+			this.zc += dz;
+			this.xa += dx;
+			this.za += dz;
+			this.update();
+		}
+		console.log("x : " + this.xc + " z : " + this.zc);
 	}
 
 	this.left 	= function () {
-		this.xc +=	-this.step*Math.cos(this.theta*3.14/180.0);
-		this.zc += 	-this.step*Math.sin(this.theta*3.14/180.0);
-		this.xa +=	-this.step*Math.cos(this.theta*3.14/180.0);
-		this.za += 	-this.step*Math.sin(this.theta*3.14/180.0);
-		this.update();
+		dx = -this.step*Math.cos(this.theta*3.14/180.0);
+		dz = -this.step*Math.sin(this.theta*3.14/180.0);
+
+		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
+
+		if( col==false) {
+			this.xc += dx;
+			this.zc += dz;
+			this.xa += dx;
+			this.za += dz;
+			this.update();
+		}
+		console.log("x : " + this.xc + " z : " + this.zc);
 	}
 
 	this.jump_up = function () {
