@@ -2,10 +2,13 @@
 <html>
 <head>
 	<title>atomicGL DEBUG </title>
-	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+ 	<link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
 	<script type="text/javascript" src="gltp1_fichiers/glMatrix-0.js"></script>
 	<script type="text/javascript" src="gltp1_fichiers/webgl-utils.js"></script>
+
+	<script src="bootstrap/jquery-1.12.0.js"></script>
+
 
 	<!-- ATOMICGL ENGINE -->
 	<!-- load "objects" -->
@@ -944,7 +947,7 @@ attribute vec3 aVertexPosition;
 	// sceneGraph
 	var sg = new atomicGLSceneGraph("root","SG_root");
 
-	var game ;
+	var game = new atomicGLGameMode(agl);;
 
 	var enemy ;
 
@@ -1038,7 +1041,7 @@ attribute vec3 aVertexPosition;
 	// -----------------------------
 		// recover penGL canvas 
 		var canvas = document.getElementById("oglcanvas");
-		game= new atomicGLGameMode(agl);
+		
 		// init OpenGL context
 		agl.initGL(canvas,[0.15,0.1,0.5]);
 		
@@ -1535,7 +1538,8 @@ attribute vec3 aVertexPosition;
 
 
         // start the animation
-        nextFrame();
+      
+     	   nextFrame();
     }
 
 // draw
@@ -1549,11 +1553,13 @@ function sceneDraw(){
 // nextFrame
 // -----------------------------
 function nextFrame() {
+
     handleKeys();
     requestAnimFrame(nextFrame);
+
     sceneDraw();
     if(!game.isPaused)
-        animate();
+    	animate();
 }
 
 // animate
@@ -1581,11 +1587,15 @@ function handleKeyDown(event) 	{ currentlyPressedKeys[event.keyCode] = true;}
 function handleKeyUp(event) 	{currentlyPressedKeys[event.keyCode] = false;}
 
 function handleKeys(canvas) {
-    if (Math.abs(mouseX)>0.1){
-        cam.turnright(3.0*(mouseX*mouseX*mouseX));
-        lastMouseX=mouseX;
-    }
-    cam.turnup(45*mouseY);
+	if(!game.isPaused)
+	    if (Math.abs(mouseX)>0.24){
+	        cam.turnright((mouseX*mouseX*mouseX));
+	        lastMouseX=mouseX;
+	    }
+	    
+	if(!game.isPaused)
+	    cam.turnup(45*mouseY);
+
     if (currentlyPressedKeys[67]) // (C) debug
     {
         // debug 
@@ -1594,34 +1604,39 @@ function handleKeys(canvas) {
     if (currentlyPressedKeys[68] || currentlyPressedKeys[39]) // (D or rightArrow) Right
     {
         // debug 
-        cam.right();		}
+	    if(!game.isPaused)
+	        cam.right();
+    }
     if (currentlyPressedKeys[81] || currentlyPressedKeys[37]) // (Q or leftArrow) Left 
     {		
         // debug 
-        cam.left();			//
+        if(!game.isPaused)
+      	  cam.left();			//
     }
     if (currentlyPressedKeys[90] || currentlyPressedKeys[38]) // (Z or upArrow) Up
     {
         // debug 
-        cam.up();			//
+        if(!game.isPaused)
+      	  cam.up();			//
     }
     if (currentlyPressedKeys[83] || currentlyPressedKeys[40]) // (S or downArrow) Down 
     {
         // debug 
-        cam.down();			//
+        if(!game.isPaused)
+		    cam.down();			//
     }
     if (currentlyPressedKeys[32] || currentlyPressedKeys[13]) // (SPACE BAR) Jump up
     {
         //debug	
-        if(cam.isIdle){
-            cam.isJumping =true;
-            cam.jump_up();
-        }
-    }
+        if(!game.isPaused)
+	        if(cam.isIdle){
+    	        cam.isJumping =true;
+        	    cam.jump_up();
+        	}
+    	}
     if (currentlyPressedKeys[27]) //(Echap) Add Menu 
     {
         //debug	
-        console.log("echap");
         game.displayMenu();
 
     }
@@ -1647,7 +1662,13 @@ function onDocumentMouseMove( event ) {
 </head>
 
 <body onload="webGLStart();">
+    <div id="myDiv"></div>
     <br>
+    <div class = row>
+    <div class = "col-lg-offset-2">
     <canvas id="oglcanvas" style="border: none;" width="1280" height="720"></canvas>
+    </div>
+    </div>
     <br>
+
 </body></html>
