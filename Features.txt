@@ -1,0 +1,12 @@
+
+- De l'eau est présente dans la rivière
+
+- Une importation d'objets 3D a été effectuée (ennemi + épée). Les textures sont importées avec.
+- Le personnage possède une épée
+- Il peut taper avec
+- Des ennemis sont présents à divers endroits de la carte
+
+- Une gestion des collisions est codée. On peut la tester sur le petit muret, sur la cabane possédant un plan incliné, et sur la 'grange' qui possède 2 arches.
+- Le personnage peut monter sur le plan incliné de la cabane. La gestion des collisions n'a pas été faite à cette hauteur.
+
+- Le personnage peut sauter, un appuant sur la touche ESPACE.
