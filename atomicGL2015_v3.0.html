@@ -55,7 +55,8 @@
 	
 	<script type="text/javascript" src="objs/arm.js"></script>
 	<script type="text/javascript" src="objs/arm2.js"></script>
-
+	<script type="text/javascript" src="objs/spearmanAnimation/Spearman.js"></script>
+	<script type="text/javascript" src="objs/spearmanAnimation/Idle01_Spearman.js"></script>
 
 
 	<!-- load "modules" -->
@@ -79,7 +80,7 @@
 	<script type="text/javascript" src="atomicGLxzPlane.js"></script>
 	<script type="text/javascript" src="atomicGLSphere.js"></script>
 	<script type="text/javascript" src="atomicGLCylinder.js"></script>
-
+	<script type="text/javascript" src="atomicGLGameEnemy.js"></script>
 	<!-- SHADER: vertex color -->
 	<!-- display the color of the  object -->
 	<script id="vertex_vertex-color" type="x-shader/x-vertex">
@@ -945,7 +946,11 @@ attribute vec3 aVertexPosition;
 
 	var game ;
 
+	var enemy ;
+
 	var time =0.0;
+	var t = 0.0 ;
+
 	// texture
 		var test, test_normal;
 		var mur_pierre1, mur_pierre1_normal;
@@ -1020,8 +1025,11 @@ attribute vec3 aVertexPosition;
 	var palais5		= new atomicGLObj('palais5', 		new palais_v01_terrase(),		1.0,1.0) ;
 	var palais6		= new atomicGLObj('palais6', 		new palais_v01_toiture(),		1.0,1.0) ;
 
-	var arm2		= new atomicGLObj('arm2', 			new arm2(),		1.0,1.0) ;
-
+	
+	var arm2		= new atomicGLObj('arm2', 			new arm2(),						1.0,1.0) ;
+	var spearman	= new atomicGLObj('spearman', 		new spearman(),					1.0,1.0) ;
+	var spearman1 	= new atomicGLObj('spearman1',		new spearman1(),				1.0,1.0) ;
+	var spearmanAnimation;
     var water = new atomicGLxzPlane('water', 200.0, 400.0, 200,200);
 
 	//webGLStart
@@ -1097,6 +1105,9 @@ attribute vec3 aVertexPosition;
 
         perlin2				=  	new atomicGLTexture("texture/perlin_noise_2.png","color",agl);
         perlin2_normal 		=  	new atomicGLTexture("texture/perlin_noise_2_normal_2.png","color",agl);
+
+        spearmanTexture				=  	new atomicGLTexture("texture/Spearman.png","color",agl);
+
 
         // -------------------------------------------------
         // load shaders and push shader in context	
@@ -1264,6 +1275,11 @@ attribute vec3 aVertexPosition;
 
         arm2.pushTexture(toit2);	
         arm2.initGLBuffers(agl);
+		
+		spearman.pushTexture(spearmanTexture);	
+       	spearman.initGLBuffers(agl);
+		spearman1.pushTexture(spearmanTexture);	
+       	spearman1.initGLBuffers(agl);
 
         // 	water
         water.pushTexture(perlin1);
@@ -1279,8 +1295,7 @@ attribute vec3 aVertexPosition;
         // --------------------------------------------------------------------------------
         sg.setRootElt(cam,sky,textProgId);
      
-
-        // ground -----------------------------------------------
+		// ground -----------------------------------------------
         var O3D_ground = new atomicGLSceneGraph('transform','ground');
         O3D_ground.setTransform([0.0,0.0,0.0],[0,1,0],0);
         sg.addChild(O3D_ground) ;
@@ -1502,11 +1517,11 @@ attribute vec3 aVertexPosition;
         O3D_wall2roof.setObject3D(wall2roof,texDiffNormalMapProgId);
         O3D_wall.addChild(O3D_wall2roof);
 
+        spearmanAnimation = [spearman1,spearman];
 
-
+		enemy = new atomicGLGameEnemy(spearmanAnimation,textProgId2,sg);
       	cam.initPlayer(arm2,textProgId2,sg);
-
-
+	
         // wall 2 --------------------------------------------------------------		
         var O3D_wall2 = new atomicGLSceneGraph('transform','wall2');
         O3D_wall2.setTransform([19.5,2,-2.0],[0,1,0],0.0);
@@ -1515,6 +1530,8 @@ attribute vec3 aVertexPosition;
         O3D_wall2.addChild(O3D_wall2stone);	
         O3D_wall2.addChild(O3D_wall2wood);	
         O3D_wall2.addChild(O3D_wall2roof);
+
+
 
 
         // start the animation
@@ -1543,12 +1560,19 @@ function nextFrame() {
 // ------------------------------
 function animate(){
     // increase time
+    
     sceneClock.tick() ;
     time = time+ 0.001*sceneClock.get();
+    t=t+0.001*sceneClock.get();
 
-    wtextProg.wTime = time; 	
+    wtextProg.wTime = time; 
+   /* if(t>1.0){
+    	enemy.isIdle=!enemy.isIdle;
+    	t=0;
+    }*/
+    	
     cam.stateMachineAnimation();
-
+	enemy.stateMachineAnimation();
 }
 
 // keyboard

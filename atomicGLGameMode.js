@@ -31,15 +31,4 @@ atomicGLGameMode = function(agl){
 	   //après click sur Ok
 	   this.isPaused=false;
 	}
-
-
-
-
-
-
-
-
-
-
-
 }

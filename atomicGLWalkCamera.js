@@ -33,7 +33,7 @@ atomicGLWalkCamera = function(){
 	this.phi = 0.0 ;
 	//vector and angle of the arm rotation
 	this.atheta = 270.0 ;
-	this.aphi =[-.2,1,0];
+	this.aphi =[0,1,0];
 
 	// step
 	this.step = 0.10;
@@ -84,8 +84,8 @@ atomicGLWalkCamera = function(){
 			this.za += dz;
 		}
 
-		console.log("x : " + this.xc + " z : " + this.zc);
-		console.log("");
+	//	console.log("x : " + this.xc + " z : " + this.zc);
+	//	console.log("");
 		this.update();
 	}
 
@@ -103,7 +103,7 @@ atomicGLWalkCamera = function(){
 			this.update();
 		}
 
-		console.log("x : " + this.xc + " z : " + this.zc);
+	//	console.log("x : " + this.xc + " z : " + this.zc);
 	}
 
 	this.right 	= function () {
@@ -119,7 +119,7 @@ atomicGLWalkCamera = function(){
 			this.za += dz;
 			this.update();
 		}
-		console.log("x : " + this.xc + " z : " + this.zc);
+	//	console.log("x : " + this.xc + " z : " + this.zc);
 	}
 
 	this.left 	= function () {
@@ -135,7 +135,7 @@ atomicGLWalkCamera = function(){
 			this.za += dz;
 			this.update();
 		}
-		console.log("x : " + this.xc + " z : " + this.zc);
+		//console.log("x : " + this.xc + " z : " + this.zc);
 	}
 
 	this.jump_up = function () {
@@ -171,7 +171,7 @@ atomicGLWalkCamera = function(){
 	this.turnup = function(a){
 		this.phi = a;
 		this.aphi[2]=this.phi/-60;
-		this.aphi[3]=this.phi/-50;
+		//this.aphi[3]=this.phi/-50;
 		this.update();		
 	}
 
@@ -215,7 +215,7 @@ atomicGLWalkCamera = function(){
 	}
 
 	this.initPlayer=function(arm2,textProgId,sg) {
-		this.O3D_arm = new atomicGLSceneGraph('object3D','wall2roof');
+		this.O3D_arm = new atomicGLSceneGraph('object3D','O3D_arm');
 		this.O3D_arm.setObject3D(arm2,textProgId);
 		this.O3D_arm.setTransform([this.xa,this.ya=1.4,this.za],
 												this.aphi,this.atheta);
@@ -238,7 +238,7 @@ atomicGLWalkCamera = function(){
 	}
 
 	this.attack = function(signe) {
-		console.log("attack");
+		//console.log("attack");
 		
 		this.xa +=	+this.step*Math.sin(this.theta*3.14/180.0)*3.0 * signe;
 		this.za += 	-this.step*Math.cos(this.theta*3.14/180.0)*3.0 * signe;
