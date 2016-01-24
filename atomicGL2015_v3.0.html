@@ -2,10 +2,13 @@
 <html>
 <head>
 	<title>atomicGL DEBUG </title>
-	<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
-
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+ 	<link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
 	<script type="text/javascript" src="gltp1_fichiers/glMatrix-0.js"></script>
 	<script type="text/javascript" src="gltp1_fichiers/webgl-utils.js"></script>
+
+	<script src="bootstrap/jquery-1.12.0.js"></script>
+
 
 	<!-- ATOMICGL ENGINE -->
 	<!-- load "objects" -->
@@ -55,7 +58,8 @@
 	
 	<script type="text/javascript" src="objs/arm.js"></script>
 	<script type="text/javascript" src="objs/arm2.js"></script>
-
+	<script type="text/javascript" src="objs/spearmanAnimation/Spearman.js"></script>
+	<script type="text/javascript" src="objs/spearmanAnimation/Idle01_Spearman.js"></script>
 
 
 	<!-- load "modules" -->
@@ -79,7 +83,7 @@
 	<script type="text/javascript" src="atomicGLxzPlane.js"></script>
 	<script type="text/javascript" src="atomicGLSphere.js"></script>
 	<script type="text/javascript" src="atomicGLCylinder.js"></script>
-
+	<script type="text/javascript" src="atomicGLGameEnemy.js"></script>
 	<!-- SHADER: vertex color -->
 	<!-- display the color of the  object -->
 	<script id="vertex_vertex-color" type="x-shader/x-vertex">
@@ -943,9 +947,13 @@ attribute vec3 aVertexPosition;
 	// sceneGraph
 	var sg = new atomicGLSceneGraph("root","SG_root");
 
-	var game ;
+	var game = new atomicGLGameMode(agl);;
+
+	var enemy ;
 
 	var time =0.0;
+	var t = 0.0 ;
+
 	// texture
 		var test, test_normal;
 		var mur_pierre1, mur_pierre1_normal;
@@ -1020,8 +1028,11 @@ attribute vec3 aVertexPosition;
 	var palais5		= new atomicGLObj('palais5', 		new palais_v01_terrase(),		1.0,1.0) ;
 	var palais6		= new atomicGLObj('palais6', 		new palais_v01_toiture(),		1.0,1.0) ;
 
-	var arm2		= new atomicGLObj('arm2', 			new arm2(),		1.0,1.0) ;
-
+	
+	var arm2		= new atomicGLObj('arm2', 			new arm2(),						1.0,1.0) ;
+	var spearman	= new atomicGLObj('spearman', 		new spearman(),					1.0,1.0) ;
+	var spearman1 	= new atomicGLObj('spearman1',		new spearman1(),				1.0,1.0) ;
+	var spearmanAnimation;
     var water = new atomicGLxzPlane('water', 200.0, 400.0, 200,200);
 
 	//webGLStart
@@ -1030,7 +1041,7 @@ attribute vec3 aVertexPosition;
 	// -----------------------------
 		// recover penGL canvas 
 		var canvas = document.getElementById("oglcanvas");
-		game= new atomicGLGameMode(agl);
+		
 		// init OpenGL context
 		agl.initGL(canvas,[0.15,0.1,0.5]);
 		
@@ -1097,6 +1108,9 @@ attribute vec3 aVertexPosition;
 
         perlin2				=  	new atomicGLTexture("texture/perlin_noise_2.png","color",agl);
         perlin2_normal 		=  	new atomicGLTexture("texture/perlin_noise_2_normal_2.png","color",agl);
+
+        spearmanTexture				=  	new atomicGLTexture("texture/Spearman.png","color",agl);
+
 
         // -------------------------------------------------
         // load shaders and push shader in context	
@@ -1264,6 +1278,11 @@ attribute vec3 aVertexPosition;
 
         arm2.pushTexture(toit2);	
         arm2.initGLBuffers(agl);
+		
+		spearman.pushTexture(spearmanTexture);	
+       	spearman.initGLBuffers(agl);
+		spearman1.pushTexture(spearmanTexture);	
+       	spearman1.initGLBuffers(agl);
 
         // 	water
         water.pushTexture(perlin1);
@@ -1279,8 +1298,7 @@ attribute vec3 aVertexPosition;
         // --------------------------------------------------------------------------------
         sg.setRootElt(cam,sky,textProgId);
      
-
-        // ground -----------------------------------------------
+		// ground -----------------------------------------------
         var O3D_ground = new atomicGLSceneGraph('transform','ground');
         O3D_ground.setTransform([0.0,0.0,0.0],[0,1,0],0);
         sg.addChild(O3D_ground) ;
@@ -1502,11 +1520,11 @@ attribute vec3 aVertexPosition;
         O3D_wall2roof.setObject3D(wall2roof,texDiffNormalMapProgId);
         O3D_wall.addChild(O3D_wall2roof);
 
+        spearmanAnimation = [spearman1,spearman];
 
-
+		enemy = new atomicGLGameEnemy(spearmanAnimation,textProgId2,sg);
       	cam.initPlayer(arm2,textProgId2,sg);
-
-
+	
         // wall 2 --------------------------------------------------------------		
         var O3D_wall2 = new atomicGLSceneGraph('transform','wall2');
         O3D_wall2.setTransform([19.5,2,-2.0],[0,1,0],0.0);
@@ -1517,8 +1535,11 @@ attribute vec3 aVertexPosition;
         O3D_wall2.addChild(O3D_wall2roof);
 
 
+
+
         // start the animation
-        nextFrame();
+      
+     	   nextFrame();
     }
 
 // draw
@@ -1532,23 +1553,32 @@ function sceneDraw(){
 // nextFrame
 // -----------------------------
 function nextFrame() {
+
     handleKeys();
     requestAnimFrame(nextFrame);
+
     sceneDraw();
     if(!game.isPaused)
-        animate();
+    	animate();
 }
 
 // animate
 // ------------------------------
 function animate(){
     // increase time
+    
     sceneClock.tick() ;
     time = time+ 0.001*sceneClock.get();
+    t=t+0.001*sceneClock.get();
 
-    wtextProg.wTime = time; 	
+    wtextProg.wTime = time; 
+   /* if(t>1.0){
+    	enemy.isIdle=!enemy.isIdle;
+    	t=0;
+    }*/
+    	
     cam.stateMachineAnimation();
-
+	enemy.stateMachineAnimation();
 }
 
 // keyboard
@@ -1557,11 +1587,15 @@ function handleKeyDown(event) 	{ currentlyPressedKeys[event.keyCode] = true;}
 function handleKeyUp(event) 	{currentlyPressedKeys[event.keyCode] = false;}
 
 function handleKeys(canvas) {
-    if (Math.abs(mouseX)>0.1){
-        cam.turnright(3.0*(mouseX*mouseX*mouseX));
-        lastMouseX=mouseX;
-    }
-    cam.turnup(45*mouseY);
+	if(!game.isPaused)
+	    if (Math.abs(mouseX)>0.24){
+	        cam.turnright((mouseX*mouseX*mouseX));
+	        lastMouseX=mouseX;
+	    }
+	    
+	if(!game.isPaused)
+	    cam.turnup(45*mouseY);
+
     if (currentlyPressedKeys[67]) // (C) debug
     {
         // debug 
@@ -1570,34 +1604,39 @@ function handleKeys(canvas) {
     if (currentlyPressedKeys[68] || currentlyPressedKeys[39]) // (D or rightArrow) Right
     {
         // debug 
-        cam.right();		}
+	    if(!game.isPaused)
+	        cam.right();
+    }
     if (currentlyPressedKeys[81] || currentlyPressedKeys[37]) // (Q or leftArrow) Left 
     {		
         // debug 
-        cam.left();			//
+        if(!game.isPaused)
+      	  cam.left();			//
     }
     if (currentlyPressedKeys[90] || currentlyPressedKeys[38]) // (Z or upArrow) Up
     {
         // debug 
-        cam.up();			//
+        if(!game.isPaused)
+      	  cam.up();			//
     }
     if (currentlyPressedKeys[83] || currentlyPressedKeys[40]) // (S or downArrow) Down 
     {
         // debug 
-        cam.down();			//
+        if(!game.isPaused)
+		    cam.down();			//
     }
     if (currentlyPressedKeys[32] || currentlyPressedKeys[13]) // (SPACE BAR) Jump up
     {
         //debug	
-        if(cam.isIdle){
-            cam.isJumping =true;
-            cam.jump_up();
-        }
-    }
+        if(!game.isPaused)
+	        if(cam.isIdle){
+    	        cam.isJumping =true;
+        	    cam.jump_up();
+        	}
+    	}
     if (currentlyPressedKeys[27]) //(Echap) Add Menu 
     {
         //debug	
-        console.log("echap");
         game.displayMenu();
 
     }
@@ -1623,7 +1662,13 @@ function onDocumentMouseMove( event ) {
 </head>
 
 <body onload="webGLStart();">
+    <div id="myDiv"></div>
     <br>
+    <div class = row>
+    <div class = "col-lg-offset-2">
     <canvas id="oglcanvas" style="border: none;" width="1280" height="720"></canvas>
+    </div>
+    </div>
     <br>
+
 </body></html>

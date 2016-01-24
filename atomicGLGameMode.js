@@ -25,21 +25,29 @@ atomicGLGameMode = function(agl){
 
 	//à modifier! Ajout du menu sur un canvas! 
 	this.displayMenu = function (){
+
+		if(this.isPaused==false){
+
        this.isPaused=true;
-	   alert("Continuer");
+	  
+		var ni = document.getElementById('myDiv');
 
-	   //après click sur Ok
-	   this.isPaused=false;
+ 		var newdiv = document.createElement('div');
+		newdiv.setAttribute("id", "newDiv");
+
+  		newdiv.innerHTML = '<div class="container"><h3>Menu</h3><ul class="nav nav-pills nav-stacked"><li class="active"><a id="continue" href="#">Continuer</a></li><li><a id = "test" href="#">Commandes</a></li><li><a href="#">Crédits</a></li><li><a href="#">Quitter</a></li></ul></div>';
+
+  		ni.appendChild(newdiv);
+
+		$('#continue').click(function(){ 
+
+			//this.isPaused=false;
+			$( '#newDiv' ).remove();
+ 			game.isPaused=false;
+		})
+
+		}
+
+	  
 	}
-
-
-
-
-
-
-
-
-
-
-
 }
