@@ -134,7 +134,7 @@
 #ifdef GL_ES
 precision highp float;
 #endif
-vec3      iResolution = vec3(800.);
+vec3      iResolution = vec3(400.);
 uniform float     uTime;
 uniform sampler2D uSampler0; 
 
@@ -1101,7 +1101,7 @@ attribute vec3 aVertexPosition;
         // load shaders and push shader in context	
         textProg 		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,1,0);
         textProgId		= agl.pushProgram(textProg);
-        textProg2		= new atomicGLShader("texture", agl,"frag_texture", "vertex_texture" ,1,0);
+        textProg2		= new atomicGLShader("texture", agl,"frag_electric", "vertex_texture" ,1,0);
         textProgId2		= agl.pushProgram(textProg);
 
         wtextProg 		= new atomicGLwaveShader("wave_texture", agl,"frag_texDiff", "vertex_wave" ,1,1);
