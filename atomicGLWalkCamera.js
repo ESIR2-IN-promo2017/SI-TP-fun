@@ -49,7 +49,6 @@ atomicGLWalkCamera = function(){
 
 	// Collisions
 	this.collision = new atomicGLCollision();
-	//this.collision.load();
 
 
 
@@ -75,57 +74,31 @@ atomicGLWalkCamera = function(){
 		dx =  this.step*Math.sin(this.theta*3.14/180.0);
 		dz = -this.step*Math.cos(this.theta*3.14/180.0);
 
-		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
 
-		if( col == false) {
-			this.xc += dx;
-			this.zc += dz;
-			this.xa += dx;
-			this.za += dz;
-		}
-
-	//	console.log("x : " + this.xc + " z : " + this.zc);
-	//	console.log("");
-		this.update();
+		this.move(dx, dz);
 	}
 
 	this.down 	= function () {
 		dx = -this.step*Math.sin(this.theta*3.14/180.0);
 		dz =  this.step*Math.cos(this.theta*3.14/180.0);
-
-		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
-
-		if( col==false){
-			this.xc += dx;
-			this.zc += dz;
-			this.xa += dx;
-			this.za += dz;
-			this.update();
-		}
-
-	//	console.log("x : " + this.xc + " z : " + this.zc);
+		this.move(dx, dz);
 	}
 
 	this.right 	= function () {
 		dx = this.step*Math.cos(this.theta*3.14/180.0);
 		dz = this.step*Math.sin(this.theta*3.14/180.0);
 
-		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
-
-		if( col==false ) {
-			this.xc += dx;
-			this.zc += dz;
-			this.xa += dx;
-			this.za += dz;
-			this.update();
-		}
-	//	console.log("x : " + this.xc + " z : " + this.zc);
+		this.move(dx, dz);
 	}
 
 	this.left 	= function () {
 		dx = -this.step*Math.cos(this.theta*3.14/180.0);
 		dz = -this.step*Math.sin(this.theta*3.14/180.0);
 
+		this.move(dx, dz);
+	}
+
+	this.move = function(dx, dz) {
 		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
 
 		if( col==false) {
@@ -133,39 +106,32 @@ atomicGLWalkCamera = function(){
 			this.zc += dz;
 			this.xa += dx;
 			this.za += dz;
-			this.update();
 		}
-		//console.log("x : " + this.xc + " z : " + this.zc);
+		this.update();
 	}
 
 	this.jump_up = function () {
-			this.yc += this.step;
-			this.isIdle= false;
-			this.isJumpingDown=false;
-			this.isJumpingUp=true;
-			this.ya+=this.step;
-			this.update();
+		this.yc += this.step;
+		this.isIdle= false;
+		this.isJumpingDown=false;
+		this.isJumpingUp=true;
+		this.ya+=this.step;
+		this.update();
 	}
 
 	this.jump_down = function () {
-			this.yc -= this.step;
-			this.isIdle= false;
-			this.isJumpingDown=true;
-			this.isJumpingUp=false;
-			this.ya-=this.step;
-			this.update();
-
+		this.yc -= this.step;
+		this.isIdle= false;
+		this.isJumpingDown=true;
+		this.isJumpingUp=false;
+		this.ya-=this.step;
+		this.update();
 	}
 
 	this.turnright 	= function (a) {
-		limit = 0.02;
-		if( a >= limit || a <= -limit) {
-			this.rotateArm(-a,-1);
-		}
-	}
-
-	this.turnleft 	= function (a) {		
-		this.rotateArm(a,1);
+		this.theta  = a*90;
+		this.atheta = 270-a*90;
+		this.update();
 	}
 
 	this.turnup = function(a){
@@ -226,11 +192,6 @@ atomicGLWalkCamera = function(){
 		sg.addChild(this.O3D_armTransform);
 	}
 
-	this.rotateArm=function(a,signe) {		
-		this.atheta += -a*signe ;
-		this.theta += +a*signe ;
-		this.update();
-	}
 
 	this.update = function() {
 		this.O3D_armTransform.setTransform([this.xa,this.ya,this.za],
