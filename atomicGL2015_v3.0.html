@@ -1588,8 +1588,8 @@ function handleKeyUp(event) 	{currentlyPressedKeys[event.keyCode] = false;}
 
 function handleKeys(canvas) {
 	if(!game.isPaused)
-	    if (Math.abs(mouseX)>0.24){
-	        cam.turnright((mouseX*mouseX*mouseX));
+	    if (Math.abs(mouseX)>0.12){
+	        cam.turnright(1.8*(mouseX*mouseX*mouseX));
 	        lastMouseX=mouseX;
 	    }
 	    
@@ -1650,7 +1650,8 @@ function onDocumentMouseMove( event ) {
     lastMouseY=mouseY;
     mouseX = ( event.clientX - windowHalfX ) / windowHalfX;
     mouseY = ( event.clientY - windowHalfY ) / windowHalfY;
-    //console.log("lastMouseX : " +  lastMouseX + " Mouse X : " + mouseX);
+    console.log(" Mouse X : " + mouseX);
+   // if(mouseX==)
 }
  
     function myClickHandler() {
