@@ -49,7 +49,6 @@ atomicGLWalkCamera = function(){
 
 	// Collisions
 	this.collision = new atomicGLCollision();
-	//this.collision.load();
 
 
 
@@ -75,57 +74,31 @@ atomicGLWalkCamera = function(){
 		dx =  this.step*Math.sin(this.theta*3.14/180.0);
 		dz = -this.step*Math.cos(this.theta*3.14/180.0);
 
-		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
-
-		if( col == false) {
-			this.xc += dx;
-			this.zc += dz;
-			this.xa += dx;
-			this.za += dz;
-		}
-
-		console.log("x : " + this.xc + " z : " + this.zc);
-		console.log("");
-		this.update();
+		this.move(dx, dz);
 	}
 
 	this.down 	= function () {
 		dx = -this.step*Math.sin(this.theta*3.14/180.0);
 		dz =  this.step*Math.cos(this.theta*3.14/180.0);
 
-		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
-
-		if( col==false){
-			this.xc += dx;
-			this.zc += dz;
-			this.xa += dx;
-			this.za += dz;
-			this.update();
-		}
-
-		console.log("x : " + this.xc + " z : " + this.zc);
+		this.move(dx, dz);
 	}
 
 	this.right 	= function () {
 		dx = this.step*Math.cos(this.theta*3.14/180.0);
 		dz = this.step*Math.sin(this.theta*3.14/180.0);
 
-		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
-
-		if( col==false ) {
-			this.xc += dx;
-			this.zc += dz;
-			this.xa += dx;
-			this.za += dz;
-			this.update();
-		}
-		console.log("x : " + this.xc + " z : " + this.zc);
+		this.move(dx, dz);
 	}
 
 	this.left 	= function () {
 		dx = -this.step*Math.cos(this.theta*3.14/180.0);
 		dz = -this.step*Math.sin(this.theta*3.14/180.0);
 
+		this.move(dx, dz);
+	}
+
+	this.move = function(dx, dz) {
 		col = this.collision.check_collision(this.xc, this.zc, this.xc+dx, this.zc+dz);
 
 		if( col==false) {
@@ -133,9 +106,9 @@ atomicGLWalkCamera = function(){
 			this.zc += dz;
 			this.xa += dx;
 			this.za += dz;
-			this.update();
 		}
 		console.log("x : " + this.xc + " z : " + this.zc);
+		this.update();
 	}
 
 	this.jump_up = function () {
